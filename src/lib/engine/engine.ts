@@ -5,10 +5,14 @@ import { createTileSet, shuffle, isDouble, sameTile, pipCount } from "./tiles";
 
 export function createGame(players: Player[], settings: GameSettings): GameState {
   const hands: Record<string, Tile[]> = {};
+  // Scores are per team
+  const teams = [...new Set(players.map((p) => p.team))];
   const scores: Record<string, number> = {};
+  for (const t of teams) {
+    scores[t] = 0;
+  }
   for (const p of players) {
     hands[p.id] = [];
-    scores[p.id] = 0;
   }
 
   return {
@@ -24,6 +28,7 @@ export function createGame(players: Player[], settings: GameSettings): GameState
     settings,
     winner: null,
     roundWinner: null,
+    winningTeam: null,
   };
 }
 
@@ -47,6 +52,7 @@ export function dealTiles(state: GameState): GameState {
     openEnds: [-1, -1],
     chain: [],
     roundWinner: null,
+    winningTeam: null,
   };
 }
 
@@ -216,8 +222,7 @@ export function passTurn(state: GameState, playerId: string): GameState {
 // ── Round End ──
 
 function checkRoundEnd(state: GameState): GameState {
-  // Check if current player (who just played) emptied their hand
-  // The previous player just played, so check all hands
+  // Check if any player emptied their hand
   for (const p of state.players) {
     if (state.hands[p.id].length === 0) {
       return endRound(state, p.id);
@@ -230,12 +235,17 @@ function checkRoundEnd(state: GameState): GameState {
       (p) => getValidMoves(state, p.id).length === 0,
     );
     if (allBlocked) {
-      // Winner is the player with the lowest pip count
-      const winner = state.players.reduce((best, p) => {
-        const bestPips = state.hands[best.id].reduce((s, t) => s + pipCount(t), 0);
-        const pPips = state.hands[p.id].reduce((s, t) => s + pipCount(t), 0);
-        return pPips < bestPips ? p : best;
-      });
+      // In team play, the team with the lowest combined pip count wins
+      const teams = [...new Set(state.players.map((p) => p.team))];
+      const teamPips = teams.map((team) => ({
+        team,
+        pips: state.players
+          .filter((p) => p.team === team)
+          .reduce((s, p) => s + state.hands[p.id].reduce((s2, t) => s2 + pipCount(t), 0), 0),
+      }));
+      const bestTeam = teamPips.reduce((a, b) => (b.pips < a.pips ? b : a));
+      // Pick a representative player from the winning team
+      const winner = state.players.find((p) => p.team === bestTeam.team)!;
       return endRound(state, winner.id);
     }
   }
@@ -244,25 +254,28 @@ function checkRoundEnd(state: GameState): GameState {
 }
 
 function endRound(state: GameState, winnerId: string): GameState {
-  // Winner scores the sum of all opponents' remaining pips
+  const winnerPlayer = state.players.find((p) => p.id === winnerId)!;
+  const winTeam = winnerPlayer.team;
+
+  // Winning team scores the sum of opposing team's remaining pips
   let roundPoints = 0;
   for (const p of state.players) {
-    if (p.id !== winnerId) {
+    if (p.team !== winTeam) {
       roundPoints += state.hands[p.id].reduce((s, t) => s + pipCount(t), 0);
     }
   }
 
   const scores = { ...state.scores };
-  scores[winnerId] = (scores[winnerId] || 0) + roundPoints;
+  scores[winTeam] = (scores[winTeam] || 0) + roundPoints;
 
-  // Check if anyone reached the target score
-  const isGameOver = scores[winnerId] >= state.settings.targetScore;
+  const isGameOver = scores[winTeam] >= state.settings.targetScore;
 
   return {
     ...state,
     scores,
     roundWinner: winnerId,
-    winner: isGameOver ? winnerId : null,
+    winningTeam: winTeam,
+    winner: isGameOver ? winTeam : null,
     status: isGameOver ? "game_over" : "round_over",
   };
 }

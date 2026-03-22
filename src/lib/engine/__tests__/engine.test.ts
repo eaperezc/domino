@@ -11,8 +11,8 @@ import {
 import { sameTile } from "../tiles";
 
 const PLAYERS: Player[] = [
-  { id: "p1", name: "Player 1", isAI: false },
-  { id: "p2", name: "Player 2", isAI: false },
+  { id: "p1", name: "Player 1", isAI: false, team: "t1" },
+  { id: "p2", name: "Player 2", isAI: false, team: "t2" },
 ];
 
 const SETTINGS = { playerCount: 2, targetScore: 100 };
@@ -296,9 +296,10 @@ describe("round end", () => {
     expect(game.roundWinner).toBe(p);
   });
 
-  it("scores winner with opponents remaining pips", () => {
+  it("scores winning team with opposing team's remaining pips", () => {
     let game = setupGame();
     const p = game.currentTurn;
+    const pTeam = game.players.find((pl) => pl.id === p)!.team;
     const other = p === "p1" ? "p2" : "p1";
 
     game = {
@@ -311,7 +312,7 @@ describe("round end", () => {
     };
 
     game = playTile(game, p, { left: 3, right: 5 }, "right");
-    expect(game.scores[p]).toBe(18);
+    expect(game.scores[pTeam]).toBe(18);
   });
 
   it("detects blocked game when no one can play", () => {

@@ -75,7 +75,7 @@ export default function PlayerHand({
   );
 
   return (
-    <div className="flex items-end justify-center gap-2 p-4">
+    <div className="flex items-end justify-center gap-2 px-4 py-2">
       {tiles.map((tile, i) => {
         const playable = validMoves.some((m) => sameTile(m.tile, tile));
         const isSource = dragIndex === i;

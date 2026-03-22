@@ -1,5 +1,7 @@
 "use client";
 
+import { theme } from "@/lib/theme";
+
 interface DominoTileProps {
   left: number;
   right: number;
@@ -7,6 +9,10 @@ interface DominoTileProps {
   isPlayable?: boolean;
   isFaceDown?: boolean;
   isStarter?: boolean;
+  /** Override rendered width in pixels (SVG scales to fit) */
+  renderWidth?: number;
+  /** Override rendered height in pixels (SVG scales to fit) */
+  renderHeight?: number;
   onClick?: () => void;
   /** "horizontal" = wide tile (left|right), "vertical" = tall tile (top/bottom) for doubles */
   orientation?: "horizontal" | "vertical";
@@ -16,11 +22,36 @@ interface DominoTileProps {
 const PIP_LAYOUTS: Record<number, [number, number][]> = {
   0: [],
   1: [[0.5, 0.5]],
-  2: [[0.25, 0.25], [0.75, 0.75]],
-  3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
-  4: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]],
-  5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]],
-  6: [[0.25, 0.25], [0.75, 0.25], [0.25, 0.5], [0.75, 0.5], [0.25, 0.75], [0.75, 0.75]],
+  2: [
+    [0.25, 0.25],
+    [0.75, 0.75],
+  ],
+  3: [
+    [0.25, 0.25],
+    [0.5, 0.5],
+    [0.75, 0.75],
+  ],
+  4: [
+    [0.25, 0.25],
+    [0.75, 0.25],
+    [0.25, 0.75],
+    [0.75, 0.75],
+  ],
+  5: [
+    [0.25, 0.25],
+    [0.75, 0.25],
+    [0.5, 0.5],
+    [0.25, 0.75],
+    [0.75, 0.75],
+  ],
+  6: [
+    [0.25, 0.25],
+    [0.75, 0.25],
+    [0.25, 0.5],
+    [0.75, 0.5],
+    [0.25, 0.75],
+    [0.75, 0.75],
+  ],
 };
 
 const PIP_RADIUS = 5;
@@ -39,7 +70,7 @@ function renderPips(
       cx={offsetX + px * cellW}
       cy={offsetY + py * cellH}
       r={PIP_RADIUS}
-      fill="#1a1a2e"
+      fill={theme.tilePip}
     />
   ));
 }
@@ -55,68 +86,94 @@ export default function DominoTile({
   isPlayable = false,
   isFaceDown = false,
   isStarter = false,
+  renderWidth,
+  renderHeight,
   onClick,
   orientation = "horizontal",
 }: DominoTileProps) {
   const isVert = orientation === "vertical";
-  const width = isVert ? SHORT : LONG;
-  const height = isVert ? LONG : SHORT;
+  // Internal coordinate space (always full size for crisp rendering)
+  const viewW = isVert ? SHORT : LONG;
+  const viewH = isVert ? LONG : SHORT;
+  // Rendered pixel size (can be overridden for smaller tiles)
+  const width = renderWidth ?? viewW;
+  const height = renderHeight ?? viewH;
+  // All SVG internals use viewBox coordinates
+  const w = viewW;
+  const h = viewH;
   const rx = 3;
 
   return (
     <svg
       width={width}
       height={height}
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`0 0 ${viewW} ${viewH}`}
       onClick={onClick}
       className={`transition-transform ${
         isSelected ? "scale-110" : ""
       } ${isPlayable ? "cursor-grab opacity-100" : "cursor-default opacity-40"}`}
-      style={{ filter: isSelected ? "drop-shadow(0 0 6px #3b82f6)" : undefined }}
+      style={{
+        filter: isSelected ? "drop-shadow(0 0 6px #3b82f6)" : undefined,
+      }}
     >
       {/* Background */}
       <rect
         x={0.5}
         y={0.5}
-        width={width - 1}
-        height={height - 1}
+        width={w - 1}
+        height={h - 1}
         rx={rx}
-        fill={isFaceDown ? "#1e293b" : isStarter ? "#fef9c3" : "#faf9f6"}
-        stroke={isSelected ? "#3b82f6" : isStarter ? "#ca8a04" : "#334155"}
+        fill={
+          isFaceDown
+            ? theme.tileBack
+            : isStarter
+              ? theme.tileStarter
+              : theme.tileFace
+        }
+        stroke={
+          isSelected
+            ? "#3b82f6"
+            : isStarter
+              ? theme.tileStarterBorder
+              : theme.tileBorder
+        }
         strokeWidth={isSelected ? 2 : isStarter ? 1.5 : 1}
       />
 
       {isFaceDown ? (
-        <rect x={5} y={5} width={width - 10} height={height - 10} rx={2} fill="#334155" />
+        <rect
+          x={5}
+          y={5}
+          width={w - 10}
+          height={h - 10}
+          rx={2}
+          fill={theme.tileBorder}
+        />
       ) : isVert ? (
         <>
-          {/* Horizontal divider for vertical tile */}
           <line
             x1={3}
-            y1={height / 2}
-            x2={width - 3}
-            y2={height / 2}
-            stroke="#94a3b8"
+            y1={h / 2}
+            x2={w - 3}
+            y2={h / 2}
+            stroke={theme.tileBorder}
             strokeWidth={1}
           />
-          {/* Top half = left value, Bottom half = right value */}
-          {renderPips(left, 0, 0, width, height / 2)}
-          {renderPips(right, 0, height / 2, width, height / 2)}
+          {renderPips(left, 0, 0, w, h / 2)}
+          {renderPips(right, 0, h / 2, w, h / 2)}
         </>
       ) : (
         <>
-          {/* Vertical divider for horizontal tile */}
           <line
-            x1={width / 2}
+            x1={w / 2}
             y1={3}
-            x2={width / 2}
-            y2={height - 3}
-            stroke="#94a3b8"
+            x2={w / 2}
+            y2={h - 3}
+            stroke={theme.tileBorder}
             strokeWidth={1}
           />
-          {/* Left half, Right half */}
-          {renderPips(left, 0, 0, width / 2, height)}
-          {renderPips(right, width / 2, 0, width / 2, height)}
+          {renderPips(left, 0, 0, w / 2, h)}
+          {renderPips(right, w / 2, 0, w / 2, h)}
         </>
       )}
     </svg>

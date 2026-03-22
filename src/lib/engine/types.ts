@@ -19,7 +19,15 @@ export interface Player {
   id: string;
   name: string;
   isAI: boolean;
+  team: string; // team identifier (e.g., "team1", "team2")
 }
+
+// ── Seating ──
+
+export type SeatPosition = "bottom" | "left" | "top" | "right";
+
+/** Maps player ID to their seat position around the board */
+export type SeatingMap = Record<string, SeatPosition>;
 
 // ── Game settings ──
 
@@ -38,11 +46,12 @@ export interface GameState {
   hands: Record<string, Tile[]>;
   currentTurn: string;
   openEnds: [number, number]; // [-1, -1] means any tile can start
-  scores: Record<string, number>;
+  scores: Record<string, number>; // team scores
   status: "waiting" | "playing" | "round_over" | "game_over";
   settings: GameSettings;
-  winner: string | null;
-  roundWinner: string | null;
+  winner: string | null;       // winning team id
+  roundWinner: string | null;  // player who went out (or lowest pips)
+  winningTeam: string | null;  // team that won the round/game
 }
 
 // ── Moves ──

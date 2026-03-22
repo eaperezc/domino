@@ -4,8 +4,8 @@ import { createGame, dealTiles, playTile, getValidMoves } from "../engine";
 import { chooseMove } from "../ai";
 
 const PLAYERS: Player[] = [
-  { id: "p1", name: "Player 1", isAI: false },
-  { id: "ai", name: "AI", isAI: true },
+  { id: "p1", name: "Player 1", isAI: false, team: "t1" },
+  { id: "ai", name: "AI", isAI: true, team: "t2" },
 ];
 
 function setupGame(): GameState {

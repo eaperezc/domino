@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { GameState, Tile } from "./types";
+import type { GameState, Tile, Player, SeatingMap } from "./types";
 import {
   createGame,
   dealTiles,
@@ -14,16 +14,23 @@ import { chooseMove } from "./ai";
 import { sameTile } from "./tiles";
 
 const HUMAN_ID = "human";
-const AI_ID = "ai";
+
+const PLAYERS_2V2: Player[] = [
+  { id: "human",    name: "You",      isAI: false, team: "team1" },
+  { id: "ai-left",  name: "West",     isAI: true,  team: "team2" },
+  { id: "ai-top",   name: "Partner",  isAI: true,  team: "team1" },
+  { id: "ai-right", name: "East",     isAI: true,  team: "team2" },
+];
+
+export const SEATING: SeatingMap = {
+  "human":    "bottom",
+  "ai-left":  "left",
+  "ai-top":   "top",
+  "ai-right": "right",
+};
 
 function initGame(): GameState {
-  const game = createGame(
-    [
-      { id: HUMAN_ID, name: "You", isAI: false },
-      { id: AI_ID, name: "Computer", isAI: true },
-    ],
-    { playerCount: 2, targetScore: 100 },
-  );
+  const game = createGame(PLAYERS_2V2, { playerCount: 4, targetScore: 200 });
   return dealTiles(game);
 }
 
@@ -33,11 +40,11 @@ export function useGameController() {
   const [handOrder, setHandOrder] = useState<number[]>([]);
   const aiThinking = useRef(false);
 
-  // Initialize game client-side only to avoid hydration mismatch from random shuffle
+  // Initialize client-side only
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (!state) setState(initGame()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset hand order when hand changes (tile played, drawn, new round)
+  // Reset hand order when hand changes
   const handLength = state?.hands[HUMAN_ID]?.length ?? 0;
   useEffect(() => {
     setHandOrder(Array.from({ length: handLength }, (_, i) => i));
@@ -47,7 +54,7 @@ export function useGameController() {
 
   const validMoves = isHumanTurn && state ? getValidMoves(state, HUMAN_ID) : [];
 
-  // Get the hand tiles in the user's custom order
+  // Ordered hand
   const rawHand = state?.hands[HUMAN_ID] ?? [];
   const orderedHand = handOrder.length === rawHand.length
     ? handOrder.map((i) => rawHand[i])
@@ -104,35 +111,40 @@ export function useGameController() {
     setSelectedTile(null);
   }, []);
 
-  // AI turn logic
+  // AI turn logic — triggers for any AI player
   useEffect(() => {
     if (!state) return;
     if (state.status !== "playing") return;
-    if (state.currentTurn !== AI_ID) return;
+    if (state.currentTurn === HUMAN_ID) return;
+
+    // Check if current player is AI
+    const currentPlayer = state.players.find((p) => p.id === state.currentTurn);
+    if (!currentPlayer?.isAI) return;
     if (aiThinking.current) return;
 
     aiThinking.current = true;
 
     const runAI = () => {
       setState((current) => {
-        if (!current || current.currentTurn !== AI_ID || current.status !== "playing") {
+        if (!current || current.currentTurn === HUMAN_ID || current.status !== "playing") {
           aiThinking.current = false;
           return current;
         }
 
-        const decision = chooseMove(current, AI_ID);
+        const aiId = current.currentTurn;
+        const decision = chooseMove(current, aiId);
 
         let next: GameState;
         switch (decision.action) {
           case "play":
-            next = playTile(current, AI_ID, decision.tile, decision.end);
+            next = playTile(current, aiId, decision.tile, decision.end);
             break;
           case "draw":
-            next = drawTile(current, AI_ID);
+            next = drawTile(current, aiId);
             setTimeout(runAI, 400);
             return next;
           case "pass":
-            next = passTurn(current, AI_ID);
+            next = passTurn(current, aiId);
             break;
           default:
             next = current;
@@ -157,6 +169,7 @@ export function useGameController() {
   return {
     state,
     humanId: HUMAN_ID,
+    seating: SEATING,
     isHumanTurn,
     selectedTile,
     validMoves,

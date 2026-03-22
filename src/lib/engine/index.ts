@@ -5,6 +5,8 @@ export type {
   GameSettings,
   GameState,
   ValidMove,
+  SeatPosition,
+  SeatingMap,
 } from "./types";
 
 export {

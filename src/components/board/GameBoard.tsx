@@ -5,10 +5,10 @@ import type { PlayedTile, ValidMove, Tile } from "@/lib/engine/types";
 import { computeLayout } from "@/lib/renderer";
 import { TILE_WIDTH, TILE_HEIGHT } from "@/lib/renderer";
 import { sameTile } from "@/lib/engine/tiles";
+import { theme } from "@/lib/theme";
 import DominoTile from "../tiles/DominoTile";
 
 const MIN_WIDTH = 900;
-const BOARD_HEIGHT = 650;
 
 interface GameBoardProps {
   chain: PlayedTile[];
@@ -27,14 +27,16 @@ export default function GameBoard({
 }: GameBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [boardWidth, setBoardWidth] = useState(MIN_WIDTH);
+  const [boardHeight, setBoardHeight] = useState(400);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const observer = new ResizeObserver((entries) => {
-      const width = entries[0].contentRect.width;
+      const { width, height } = entries[0].contentRect;
       setBoardWidth(Math.max(width, MIN_WIDTH));
+      setBoardHeight(Math.max(height, 200));
     });
 
     observer.observe(el);
@@ -42,8 +44,8 @@ export default function GameBoard({
   }, []);
 
   const layout = useMemo(
-    () => computeLayout(chain, boardWidth, BOARD_HEIGHT),
-    [chain, boardWidth],
+    () => computeLayout(chain, boardWidth, boardHeight),
+    [chain, boardWidth, boardHeight],
   );
 
   // Which ends can the dragged tile be played on?
@@ -88,20 +90,30 @@ export default function GameBoard({
   }, [draggingTile]);
 
   const vbX = -boardWidth / 2;
-  const vbY = -BOARD_HEIGHT / 2;
+  const vbY = -boardHeight / 2;
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden rounded-xl bg-emerald-900 border border-emerald-700"
-      style={{ minWidth: MIN_WIDTH, height: BOARD_HEIGHT }}
+      className="relative w-full h-full overflow-hidden rounded-2xl border"
+      style={{
+        minWidth: MIN_WIDTH,
+        minHeight: 200,
+        backgroundColor: theme.boardBg,
+        borderColor: theme.boardBorder,
+      }}
     >
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)]" />
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          background: `radial-gradient(circle at 50% 50%, ${theme.boardFelt}, transparent)`,
+        }}
+      />
 
       <svg
         width={boardWidth}
-        height={BOARD_HEIGHT}
-        viewBox={`${vbX} ${vbY} ${boardWidth} ${BOARD_HEIGHT}`}
+        height={boardHeight}
+        viewBox={`${vbX} ${vbY} ${boardWidth} ${boardHeight}`}
         className="relative z-10"
       >
         {/* Rendered tiles */}
