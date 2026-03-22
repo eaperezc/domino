@@ -8,7 +8,7 @@ import { sameTile } from "@/lib/engine/tiles";
 import { theme } from "@/lib/theme";
 import DominoTile from "../tiles/DominoTile";
 
-const MIN_WIDTH = 900;
+const MIN_WIDTH = 0;
 
 interface GameBoardProps {
   chain: PlayedTile[];
@@ -85,31 +85,40 @@ export default function GameBoard({
     e.dataTransfer.dropEffect = "move";
   }, []);
 
-  const vbX = -boardWidth / 2;
-  const vbY = -boardHeight / 2;
+  // Use a minimum viewBox size so tiles zoom out on small boards
+  // instead of getting clipped
+  const MIN_VB_WIDTH = 900;
+  const MIN_VB_HEIGHT = 600;
+  const vbW = Math.max(boardWidth, MIN_VB_WIDTH);
+  const vbH = Math.max(boardHeight, MIN_VB_HEIGHT);
+  const vbX = -vbW / 2;
+  const vbY = -vbH / 2;
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden rounded-2xl border"
+      className="relative w-full h-full overflow-hidden"
       style={{
         minWidth: MIN_WIDTH,
         minHeight: 200,
-        backgroundColor: theme.boardBg,
-        borderColor: theme.boardBorder,
+        background: "radial-gradient(circle at center, #166534 0%, #064e3b 100%)",
+        boxShadow: "inset 0 10px 30px rgba(0,0,0,0.4)",
+        borderRadius: 16,
       }}
     >
+      {/* Felt texture + vignette */}
       <div
-        className="absolute inset-0 opacity-10"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at 50% 50%, ${theme.boardFelt}, transparent)`,
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.3) 100%)",
         }}
       />
 
       <svg
         width={boardWidth}
         height={boardHeight}
-        viewBox={`${vbX} ${vbY} ${boardWidth} ${boardHeight}`}
+        viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
+        preserveAspectRatio="xMidYMid meet"
         className="relative z-10"
       >
         {/* Rendered tiles */}

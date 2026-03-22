@@ -46,8 +46,12 @@ export default function LocalGamePage() {
 
   return (
     <div
-      className="h-screen flex flex-col items-center gap-3 px-6 py-3 overflow-hidden"
+      className="h-screen flex flex-col items-center gap-2 px-3 py-2 overflow-hidden"
       style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
+    >
+    <div
+      className="flex flex-col items-center gap-2 w-full h-full px-8"
+      style={{ margin: "0 auto" }}
     >
       {/* Game status bar */}
       <GameStatus
@@ -71,9 +75,9 @@ export default function LocalGamePage() {
       />
 
       {/* Middle row: left opponent, board, right opponent — fills remaining space */}
-      <div className="flex items-stretch gap-8 w-full flex-1 min-h-0">
+      <div className="flex items-stretch gap-4 w-full flex-1 min-h-0">
         {/* Left opponent */}
-        <div className="flex-shrink-0 flex items-center pl-8">
+        <div className="flex-shrink-0 flex items-center pl-2">
           <OpponentHand
             name={leftPlayer.name}
             tileCount={game.state.hands[leftPlayer.id]?.length ?? 0}
@@ -94,7 +98,7 @@ export default function LocalGamePage() {
         </div>
 
         {/* Right opponent */}
-        <div className="flex-shrink-0 flex items-center pr-8">
+        <div className="flex-shrink-0 flex items-center pr-2">
           <OpponentHand
             name={rightPlayer.name}
             tileCount={game.state.hands[rightPlayer.id]?.length ?? 0}
@@ -105,7 +109,16 @@ export default function LocalGamePage() {
       </div>
 
       {/* Player hand (bottom) */}
-      <div className="flex items-center mb-4 mt-2 gap-3 flex-shrink-0">
+      <div
+        className={`relative z-20 flex items-center mb-2 mt-1 gap-4 flex-shrink-0 rounded-2xl px-4 py-2 transition-all duration-200 ${
+          game.isHumanTurn ? "animate-[glow_1.5s_ease-in-out_infinite_alternate]" : ""
+        }`}
+        style={{
+          background: "rgba(15, 23, 42, 0.6)",
+          backdropFilter: "blur(8px)",
+          border: game.isHumanTurn ? "2px solid #22c55e" : "2px solid rgba(255,255,255,0.05)",
+        }}
+      >
         <PlayerHand
           tiles={game.orderedHand}
           validMoves={game.validMoves}
@@ -142,6 +155,7 @@ export default function LocalGamePage() {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

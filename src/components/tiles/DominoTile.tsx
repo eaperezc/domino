@@ -101,7 +101,21 @@ export default function DominoTile({
   // All SVG internals use viewBox coordinates
   const w = viewW;
   const h = viewH;
-  const rx = 3;
+  const rx = 8;
+
+  // Shadow and glow styles
+  const shadowFilter = (() => {
+    if (isSelected) {
+      return "drop-shadow(0 0 8px #3b82f6)";
+    }
+    if (isStarter) {
+      return "drop-shadow(0 0 10px rgba(250, 204, 21, 0.6))";
+    }
+    if (isFaceDown) {
+      return "drop-shadow(0 1px 2px rgba(0,0,0,0.3))";
+    }
+    return "drop-shadow(0 2px 4px rgba(0,0,0,0.25))";
+  })();
 
   return (
     <svg
@@ -109,19 +123,30 @@ export default function DominoTile({
       height={height}
       viewBox={`0 0 ${viewW} ${viewH}`}
       onClick={onClick}
-      className={`transition-transform ${
-        isSelected ? "scale-110" : ""
-      } ${isPlayable ? "cursor-grab opacity-100" : "cursor-default opacity-40"}`}
-      style={{
-        filter: isSelected ? "drop-shadow(0 0 6px #3b82f6)" : undefined,
-      }}
+      className={[
+        "transition-all duration-150",
+        isSelected ? "scale-110" : "",
+        isPlayable
+          ? "cursor-grab opacity-100 hover:-translate-y-[2px] hover:brightness-110 active:scale-[0.97]"
+          : "cursor-default opacity-40",
+      ].join(" ")}
+      style={{ filter: shadowFilter }}
     >
-      {/* Background */}
+      {/* Bevel highlight */}
       <rect
         x={0.5}
         y={0.5}
         width={w - 1}
         height={h - 1}
+        rx={rx}
+        fill="rgba(255,255,255,0.15)"
+      />
+      {/* Background */}
+      <rect
+        x={0.5}
+        y={1.5}
+        width={w - 1}
+        height={h - 2}
         rx={rx}
         fill={
           isFaceDown
@@ -135,7 +160,7 @@ export default function DominoTile({
             ? "#3b82f6"
             : isStarter
               ? theme.tileStarterBorder
-              : theme.tileBorder
+              : "rgba(0,0,0,0.15)"
         }
         strokeWidth={isSelected ? 2 : isStarter ? 1.5 : 1}
       />

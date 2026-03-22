@@ -9,7 +9,6 @@ interface PartnerHandProps {
   isCurrentTurn: boolean;
 }
 
-// Rendered size for partner's vertical tiles
 const TILE_W = 42;
 const TILE_H = 85;
 
@@ -21,8 +20,14 @@ export default function PartnerHand({
   const tiles = Array.from({ length: tileCount });
 
   return (
-    <div className="flex flex-row my-2 items-center gap-4 flex-shrink-0">
-      <div className="flex flex-row gap-2 items-center">
+    <div
+      className="flex flex-row my-2 items-center gap-4 flex-shrink-0 transition-all duration-200"
+      style={{
+        opacity: isCurrentTurn ? 1 : 0.6,
+        transform: isCurrentTurn ? "scale(1.05)" : "scale(1)",
+      }}
+    >
+      <div className="flex flex-row gap-1 items-center">
         {tiles.map((_, i) => (
           <DominoTile
             key={i}

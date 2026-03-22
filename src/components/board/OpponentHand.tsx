@@ -10,7 +10,6 @@ interface OpponentHandProps {
   position: "left" | "right";
 }
 
-// Rendered size for opponent's horizontal tiles
 const TILE_W = 95;
 const TILE_H = 45;
 
@@ -23,14 +22,20 @@ export default function OpponentHand({
   const tiles = Array.from({ length: tileCount });
 
   return (
-    <div className="flex flex-col items-center gap-4 flex-shrink-0">
+    <div
+      className="flex flex-col items-center gap-3 flex-shrink-0 transition-all duration-200"
+      style={{
+        opacity: isCurrentTurn ? 1 : 0.6,
+        transform: isCurrentTurn ? "scale(1.05)" : "scale(1)",
+      }}
+    >
       <PlayerAvatar
         name={name}
         tileCount={tileCount}
         isCurrentTurn={isCurrentTurn}
         position={position}
       />
-      <div className="flex flex-col  gap-2 align-center">
+      <div className="flex flex-col gap-1">
         {tiles.map((_, i) => (
           <DominoTile
             key={i}

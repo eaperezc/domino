@@ -1,7 +1,6 @@
 "use client";
 
 import type { GameState } from "@/lib/engine/types";
-import { theme } from "@/lib/theme";
 
 interface GameStatusProps {
   state: GameState;
@@ -18,62 +17,71 @@ export default function GameStatus({
   const isHumanTurn = state.currentTurn === humanId && state.status === "playing";
   const currentPlayer = state.players.find((p) => p.id === state.currentTurn);
 
+  const myTeam = teams.find((t) => t === humanTeam)!;
+  const oppTeam = teams.find((t) => t !== humanTeam)!;
+  const myScore = state.scores[myTeam] ?? 0;
+  const oppScore = state.scores[oppTeam] ?? 0;
+
   return (
-    <div
-      className="flex items-center justify-between px-6 py-3 rounded-lg text-sm w-full max-w-4xl"
-      style={{ backgroundColor: theme.panelBg }}
-    >
-      {/* Team scores */}
-      <div className="flex gap-6">
-        {teams.map((team) => {
-          const isMyTeam = team === humanTeam;
-          const teamPlayers = state.players.filter((p) => p.team === team);
-          return (
-            <div key={team} className="flex items-center gap-2">
-              <span
-                className="text-xs font-medium px-2 py-0.5 rounded"
-                style={{
-                  backgroundColor: isMyTeam ? theme.accentMuted : theme.panelBorder,
-                  color: isMyTeam ? theme.accentPrimary : theme.pageTextMuted,
-                }}
-              >
-                {isMyTeam ? "Your team" : "Opponents"}
-              </span>
-              <span
-                className="font-bold"
-                style={{ color: isMyTeam ? theme.pageText : theme.pageTextMuted }}
-              >
-                {state.scores[team] ?? 0}
-              </span>
-              <span className="text-xs" style={{ color: theme.pageTextMuted }}>
-                ({teamPlayers.map((p) => p.name).join(" & ")})
-              </span>
-            </div>
-          );
-        })}
+    <div className="flex items-center justify-center gap-3 flex-shrink-0">
+      {/* Score HUD */}
+      <div
+        className="flex items-center gap-4 text-sm"
+        style={{
+          background: "rgba(0,0,0,0.6)",
+          borderRadius: 999,
+          padding: "8px 20px",
+        }}
+      >
+        {/* Your team */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-medium text-emerald-400">Your team</span>
+          <span className="text-lg font-bold text-white">{myScore}</span>
+        </div>
+
+        {/* VS divider */}
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
+          vs
+        </span>
+
+        {/* Opponents */}
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-bold text-white/60">{oppScore}</span>
+          <span className="text-[11px] font-medium text-white/40">Opponents</span>
+        </div>
       </div>
 
-      {/* Turn indicator */}
+      {/* Turn indicator pill */}
       {state.status === "playing" && (
         <div
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-medium"
+          className="flex items-center gap-2 text-xs font-medium"
           style={{
-            backgroundColor: isHumanTurn ? theme.accentPrimary : theme.panelBorder,
-            color: isHumanTurn ? "#000" : theme.pageTextMuted,
+            background: isHumanTurn ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.06)",
+            borderRadius: 999,
+            padding: "6px 14px",
+            border: isHumanTurn ? "1px solid rgba(34,197,94,0.4)" : "1px solid rgba(255,255,255,0.08)",
+            color: isHumanTurn ? "#4ade80" : "rgba(255,255,255,0.4)",
           }}
         >
           {isHumanTurn && (
-            <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           )}
           <span>
-            {isHumanTurn ? "Your turn" : `${currentPlayer?.name} is thinking...`}
+            {isHumanTurn ? "Your turn" : `${currentPlayer?.name}...`}
           </span>
         </div>
       )}
 
       {/* Boneyard — only show when there are tiles */}
       {state.boneyard.length > 0 && (
-        <div style={{ color: theme.pageTextMuted }}>
+        <div
+          className="text-[11px] text-white/30"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            borderRadius: 999,
+            padding: "6px 12px",
+          }}
+        >
           Boneyard: {state.boneyard.length}
         </div>
       )}

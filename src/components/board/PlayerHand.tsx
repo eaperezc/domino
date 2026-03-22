@@ -81,9 +81,14 @@ export default function PlayerHand({
             onDragEnd={handleDragEnd}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, i)}
-            className={`cursor-grab active:cursor-grabbing ${
+            className={`cursor-grab active:cursor-grabbing transition-all duration-150 ${
               playable && !isSource ? "hover:-translate-y-2" : ""
             }`}
+            style={{
+              filter: playable && !isSource
+                ? "drop-shadow(0 0 6px rgba(250, 204, 21, 0.4))"
+                : undefined,
+            }}
           >
             <DominoTile
               left={tile.left}
