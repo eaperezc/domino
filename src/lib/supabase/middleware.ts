@@ -30,6 +30,13 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Redirect authenticated users from landing to home
+  if (request.nextUrl.pathname === "/" && user) {
+    const homeUrl = request.nextUrl.clone();
+    homeUrl.pathname = "/home";
+    return NextResponse.redirect(homeUrl);
+  }
+
   // Redirect unauthenticated users away from protected routes
   const isProtected = PROTECTED_PATHS.some((p) =>
     request.nextUrl.pathname.startsWith(p),
