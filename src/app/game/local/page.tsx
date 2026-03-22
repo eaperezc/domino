@@ -114,9 +114,8 @@ export default function LocalGamePage() {
           game.isHumanTurn ? "animate-[glow_1.5s_ease-in-out_infinite_alternate]" : ""
         }`}
         style={{
-          background: "rgba(15, 23, 42, 0.6)",
-          backdropFilter: "blur(8px)",
-          border: game.isHumanTurn ? "2px solid #22c55e" : "2px solid rgba(255,255,255,0.05)",
+          background: theme.surfaceBg,
+          border: game.isHumanTurn ? `2px solid ${theme.turnActive}` : `1px solid ${theme.surfaceBorder}`,
         }}
       >
         <PlayerHand

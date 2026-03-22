@@ -23,6 +23,8 @@ export interface Theme {
   accentMuted: string;
   panelBg: string;
   panelBorder: string;
+  surfaceBg: string;       // cards, panels — slightly lighter than pageBg
+  surfaceBorder: string;   // subtle border for surfaces
 
   // Turn indicator
   turnActive: string;
@@ -64,6 +66,8 @@ export const darkTheme: Theme = {
   accentMuted: "#065f46",
   panelBg: "#141414",
   panelBorder: "#222222",
+  surfaceBg: "#1a1a1a",
+  surfaceBorder: "#2a2a2a",
 
   turnActive: "#4ade80",
   turnInactive: "#333333",

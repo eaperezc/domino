@@ -29,9 +29,8 @@ export default function PlayerAvatar({
         isVertical ? "flex-col" : "flex-row"
       } ${isCurrentTurn ? "animate-[glow_1.5s_ease-in-out_infinite_alternate]" : ""}`}
       style={{
-        background: "rgba(15, 23, 42, 0.8)",
-        backdropFilter: "blur(8px)",
-        border: isCurrentTurn ? "2px solid #22c55e" : "2px solid transparent",
+        background: theme.surfaceBg,
+        border: isCurrentTurn ? `2px solid ${theme.turnActive}` : `1px solid ${theme.surfaceBorder}`,
         boxShadow: isCurrentTurn ? "0 0 15px rgba(34,197,94,0.5)" : "none",
         opacity: isCurrentTurn ? 1 : 0.6,
         transform: isCurrentTurn ? "scale(1.05)" : "scale(1)",

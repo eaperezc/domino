@@ -27,7 +27,7 @@ export function computeLayout(
   if (chain.length === 0) {
     return {
       tiles: [],
-      dropZones: [{ end: "right", x: -TILE_WIDTH / 2, y: -TILE_HEIGHT / 2, rotation: 0 }],
+      dropZones: [{ end: "right", cursorX: 0, cursorY: 0, direction: "right" as const, isLeftArm: false }],
       bounds: { minX: -100, minY: -100, maxX: 100, maxY: 100 },
     };
   }
@@ -106,21 +106,32 @@ export function computeLayout(
     leftTilesSinceBend++;
   }
 
-  // Drop zones
+  // Drop zones — store raw cursor position + direction so the renderer
+  // can compute the correct rect based on the dragged tile (double vs not).
   const dropZones: DropZoneRenderState[] = [];
 
-  // Left drop zone
-  const leftDZPos = tilePositionLeft(leftCursor, false);
-  dropZones.push({ end: "left", x: leftDZPos.x, y: leftDZPos.y, rotation: 0 });
+  dropZones.push({
+    end: "left",
+    cursorX: leftCursor.x,
+    cursorY: leftCursor.y,
+    direction: leftCursor.dir,
+    isLeftArm: true,
+  });
 
-  // Right drop zone
-  const rightDZPos = tilePosition(rightCursor, false);
-  dropZones.push({ end: "right", x: rightDZPos.x, y: rightDZPos.y, rotation: 0 });
+  dropZones.push({
+    end: "right",
+    cursorX: rightCursor.x,
+    cursorY: rightCursor.y,
+    direction: rightCursor.dir,
+    isLeftArm: false,
+  });
 
-  // Bounds
+  // Bounds — use non-double position as a reasonable estimate for padding
   const padding = TILE_WIDTH + 20;
-  const allX = [...tiles.map((t) => t.x), ...dropZones.map((d) => d.x)];
-  const allY = [...tiles.map((t) => t.y), ...dropZones.map((d) => d.y)];
+  const leftDZPos = tilePositionLeft(leftCursor, false);
+  const rightDZPos = tilePosition(rightCursor, false);
+  const allX = [...tiles.map((t) => t.x), leftDZPos.x, rightDZPos.x];
+  const allY = [...tiles.map((t) => t.y), leftDZPos.y, rightDZPos.y];
   const bounds = {
     minX: Math.min(...allX) - padding,
     minY: Math.min(...allY) - padding,

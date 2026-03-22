@@ -1,6 +1,7 @@
 "use client";
 
 import type { GameState } from "@/lib/engine/types";
+import { theme } from "@/lib/theme";
 
 interface GameStatusProps {
   state: GameState;
@@ -28,7 +29,7 @@ export default function GameStatus({
       <div
         className="flex items-center gap-4 text-sm"
         style={{
-          background: "rgba(0,0,0,0.6)",
+          background: theme.surfaceBg,
           borderRadius: 999,
           padding: "8px 20px",
         }}
