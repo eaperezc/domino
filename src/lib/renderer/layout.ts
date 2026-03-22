@@ -229,39 +229,7 @@ function advanceCursor(cursor: Cursor, isDbl: boolean): void {
   }
 }
 
-/** Clockwise bend (used for right-side chain growth) */
-function bendCursor(cursor: Cursor): void {
-  const oldDir = cursor.dir;
-  cursor.dir = turnDirection(oldDir, "clockwise");
-
-  switch (oldDir) {
-    case "right": cursor.x -= TILE_GAP; break;
-    case "left":  cursor.x += TILE_GAP; break;
-    case "down":  cursor.y -= TILE_GAP; break;
-    case "up":    cursor.y += TILE_GAP; break;
-  }
-
-  switch (oldDir) {
-    case "right":
-      cursor.x -= TILE_HEIGHT / 2;
-      cursor.y += TILE_HEIGHT / 2;
-      break;
-    case "down":
-      cursor.y -= TILE_HEIGHT / 2;
-      cursor.x -= TILE_HEIGHT / 2;
-      break;
-    case "left":
-      cursor.x += TILE_HEIGHT / 2;
-      cursor.y -= TILE_HEIGHT / 2;
-      break;
-    case "up":
-      cursor.y += TILE_HEIGHT / 2;
-      cursor.x += TILE_HEIGHT / 2;
-      break;
-  }
-}
-
-/** Counter-clockwise bend (used for left-side chain growth) */
+/** Counter-clockwise bend (used for both arms) */
 function bendCursorCounterCW(cursor: Cursor): void {
   const oldDir = cursor.dir;
   cursor.dir = turnDirection(oldDir, "counter");

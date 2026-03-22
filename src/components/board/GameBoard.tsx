@@ -61,6 +61,7 @@ export default function GameBoard({
   }, [draggingTile, validMoves]);
 
   const [hoverEnd, setHoverEnd] = useState<string | null>(null);
+  const activeHoverEnd = draggingTile ? hoverEnd : null;
 
   const handleDropOnBoard = useCallback(
     (e: DragEvent, end: "left" | "right") => {
@@ -83,11 +84,6 @@ export default function GameBoard({
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   }, []);
-
-  // Reset hover when drag ends (tile dropped or drag cancelled)
-  useEffect(() => {
-    if (!draggingTile) setHoverEnd(null);
-  }, [draggingTile]);
 
   const vbX = -boardWidth / 2;
   const vbY = -boardHeight / 2;
@@ -143,7 +139,7 @@ export default function GameBoard({
                 >
                   <DropTarget
                     end={dz.end}
-                    isHover={hoverEnd === dz.end}
+                    isHover={activeHoverEnd === dz.end}
                     onDragOver={(e) => {
                       handleDragOver(e);
                       setHoverEnd(dz.end);

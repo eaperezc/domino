@@ -33,7 +33,8 @@ export function createGame(players: Player[], settings: GameSettings): GameState
 }
 
 export function dealTiles(state: GameState): GameState {
-  const boneyard = [...state.boneyard];
+  // Always start from a fresh shuffled set
+  const boneyard = shuffle(createTileSet());
   const hands: Record<string, Tile[]> = {};
 
   for (const p of state.players) {

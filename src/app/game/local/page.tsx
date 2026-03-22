@@ -1,6 +1,7 @@
 "use client";
 
 import GameBoard from "@/components/board/GameBoard";
+import GameOverDialog from "@/components/board/GameOverDialog";
 import GameStatus from "@/components/board/GameStatus";
 import OpponentHand from "@/components/board/OpponentHand";
 import PartnerHand from "@/components/board/PartnerHand";
@@ -21,7 +22,7 @@ export default function LocalGamePage() {
       game.playTile(tile, end);
       resetDrag();
     },
-    [game.playTile, resetDrag],
+    [game, resetDrag],
   );
 
   if (!game.state) {
@@ -50,6 +51,12 @@ export default function LocalGamePage() {
     >
       {/* Game status bar */}
       <GameStatus
+        state={game.state}
+        humanId={game.humanId}
+      />
+
+      {/* Game over / round over dialog */}
+      <GameOverDialog
         state={game.state}
         humanId={game.humanId}
         onNewRound={game.startNewRound}
@@ -105,7 +112,6 @@ export default function LocalGamePage() {
           onReorder={game.reorderHand}
           onDragStart={startDrag}
           onDragReset={resetDrag}
-          isDragging={drag.tile !== null}
         />
 
         <div className="flex flex-col items-center gap-2">

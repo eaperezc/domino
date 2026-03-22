@@ -37,18 +37,20 @@ function initGame(): GameState {
 export function useGameController() {
   const [state, setState] = useState<GameState | null>(null);
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
-  const [handOrder, setHandOrder] = useState<number[]>([]);
+  const [handOrder, setHandOrder] = useState<number[] | null>(null);
+  const prevHandLength = useRef(0);
   const aiThinking = useRef(false);
 
   // Initialize client-side only
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (!state) setState(initGame()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset hand order when hand changes
+  // Reset hand order when hand length changes (tile played/drawn/new round)
   const handLength = state?.hands[HUMAN_ID]?.length ?? 0;
-  useEffect(() => {
-    setHandOrder(Array.from({ length: handLength }, (_, i) => i));
-  }, [handLength]);
+  if (handLength !== prevHandLength.current) {
+    prevHandLength.current = handLength;
+    if (handOrder !== null) setHandOrder(null);
+  }
 
   const isHumanTurn = state?.currentTurn === HUMAN_ID && state?.status === "playing";
 
@@ -56,7 +58,7 @@ export function useGameController() {
 
   // Ordered hand
   const rawHand = state?.hands[HUMAN_ID] ?? [];
-  const orderedHand = handOrder.length === rawHand.length
+  const orderedHand = handOrder && handOrder.length === rawHand.length
     ? handOrder.map((i) => rawHand[i])
     : rawHand;
 
@@ -74,12 +76,13 @@ export function useGameController() {
 
   const reorderHand = useCallback((fromIndex: number, toIndex: number) => {
     setHandOrder((prev) => {
-      const next = [...prev];
+      const base = prev ?? Array.from({ length: handLength }, (_, i) => i);
+      const next = [...base];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
       return next;
     });
-  }, []);
+  }, [handLength]);
 
   const handlePlayTile = useCallback(
     (tile: Tile, end: "left" | "right") => {

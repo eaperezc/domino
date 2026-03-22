@@ -6,20 +6,16 @@ import { theme } from "@/lib/theme";
 interface GameStatusProps {
   state: GameState;
   humanId: string;
-  onNewRound?: () => void;
-  onNewGame?: () => void;
 }
 
 export default function GameStatus({
   state,
   humanId,
-  onNewRound,
-  onNewGame,
 }: GameStatusProps) {
   const humanPlayer = state.players.find((p) => p.id === humanId)!;
   const humanTeam = humanPlayer.team;
   const teams = [...new Set(state.players.map((p) => p.team))];
-  const isHumanTurn = state.currentTurn === humanId;
+  const isHumanTurn = state.currentTurn === humanId && state.status === "playing";
   const currentPlayer = state.players.find((p) => p.id === state.currentTurn);
 
   return (
@@ -57,53 +53,30 @@ export default function GameStatus({
         })}
       </div>
 
-      {/* Turn / Status */}
-      <div style={{ color: theme.pageTextMuted }}>
-        {state.status === "playing" && (
+      {/* Turn indicator */}
+      {state.status === "playing" && (
+        <div
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full font-medium"
+          style={{
+            backgroundColor: isHumanTurn ? theme.accentPrimary : theme.panelBorder,
+            color: isHumanTurn ? "#000" : theme.pageTextMuted,
+          }}
+        >
+          {isHumanTurn && (
+            <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+          )}
           <span>
-            {isHumanTurn
-              ? "Your turn"
-              : `${currentPlayer?.name} is thinking...`}
+            {isHumanTurn ? "Your turn" : `${currentPlayer?.name} is thinking...`}
           </span>
-        )}
-        {state.status === "round_over" && (
-          <div className="flex items-center gap-3">
-            <span>
-              {state.winningTeam === humanTeam
-                ? "Your team won the round!"
-                : "Opponents won the round"}
-            </span>
-            <button
-              onClick={onNewRound}
-              className="px-3 py-1 rounded text-white text-xs"
-              style={{ backgroundColor: theme.btnPrimary }}
-            >
-              Next Round
-            </button>
-          </div>
-        )}
-        {state.status === "game_over" && (
-          <div className="flex items-center gap-3">
-            <span>
-              {state.winner === humanTeam
-                ? "Your team won the game!"
-                : "Opponents won the game!"}
-            </span>
-            <button
-              onClick={onNewGame}
-              className="px-3 py-1 rounded text-white text-xs"
-              style={{ backgroundColor: theme.accentPrimary }}
-            >
-              New Game
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Boneyard */}
-      <div style={{ color: theme.pageTextMuted }}>
-        Boneyard: {state.boneyard.length}
-      </div>
+      {/* Boneyard — only show when there are tiles */}
+      {state.boneyard.length > 0 && (
+        <div style={{ color: theme.pageTextMuted }}>
+          Boneyard: {state.boneyard.length}
+        </div>
+      )}
     </div>
   );
 }

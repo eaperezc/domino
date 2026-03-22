@@ -11,7 +11,6 @@ interface PlayerHandProps {
   onReorder: (fromIndex: number, toIndex: number) => void;
   onDragStart: (tile: Tile, index: number) => void;
   onDragReset: () => void;
-  isDragging: boolean;
 }
 
 export default function PlayerHand({
@@ -20,14 +19,11 @@ export default function PlayerHand({
   onReorder,
   onDragStart,
   onDragReset,
-  isDragging,
 }: PlayerHandProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const resetLocal = useCallback(() => {
     setDragIndex(null);
-    setDragOverIndex(null);
   }, []);
 
   const handleDragStart = useCallback(
@@ -52,14 +48,11 @@ export default function PlayerHand({
   }, [resetLocal, onDragReset]);
 
   const handleDragOver = useCallback(
-    (e: React.DragEvent, index: number) => {
+    (e: React.DragEvent) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
-      if (dragIndex !== null && index !== dragIndex) {
-        setDragOverIndex(index);
-      }
     },
-    [dragIndex],
+    [],
   );
 
   const handleDrop = useCallback(
@@ -79,7 +72,6 @@ export default function PlayerHand({
       {tiles.map((tile, i) => {
         const playable = validMoves.some((m) => sameTile(m.tile, tile));
         const isSource = dragIndex === i;
-        const isOver = dragOverIndex === i;
 
         return (
           <div
@@ -87,13 +79,8 @@ export default function PlayerHand({
             draggable
             onDragStart={(e) => handleDragStart(e, i)}
             onDragEnd={handleDragEnd}
-            onDragOver={(e) => handleDragOver(e, i)}
+            onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, i)}
-            style={{
-              opacity: isSource ? 0.3 : 1,
-              transform: isOver ? "translateX(16px)" : "none",
-              transition: isDragging ? "transform 150ms ease" : "none",
-            }}
             className={`cursor-grab active:cursor-grabbing ${
               playable && !isSource ? "hover:-translate-y-2" : ""
             }`}
@@ -102,7 +89,7 @@ export default function PlayerHand({
               left={tile.left}
               right={tile.right}
               orientation="vertical"
-              isPlayable={playable}
+              isPlayable={playable && !isSource}
             />
           </div>
         );

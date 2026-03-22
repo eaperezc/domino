@@ -44,7 +44,7 @@ export interface Theme {
 }
 
 export const darkTheme: Theme = {
-  pageBg: "#0f172a",          // slate-900
+  pageBg: "#0a0a0a",          // near black
   pageText: "#f8fafc",        // slate-50
   pageTextMuted: "#94a3b8",   // slate-400
 
@@ -53,8 +53,8 @@ export const darkTheme: Theme = {
   boardFelt: "rgba(255,255,255,0.1)",
 
   tileFace: "#faf9f6",
-  tileBack: "#1e293b",        // slate-800
-  tileBorder: "#334155",      // slate-700
+  tileBack: "#1a1a1a",        // dark gray
+  tileBorder: "#2a2a2a",      // dark gray
   tilePip: "#1a1a2e",
   tileStarter: "#fef9c3",     // yellow-100
   tileStarterBorder: "#ca8a04", // yellow-600
@@ -62,11 +62,11 @@ export const darkTheme: Theme = {
   accentPrimary: "#10b981",   // emerald-500
   accentHover: "#34d399",     // emerald-400
   accentMuted: "#065f46",     // emerald-800
-  panelBg: "#1e293b",         // slate-800
-  panelBorder: "#334155",     // slate-700
+  panelBg: "#141414",         // dark gray
+  panelBorder: "#222222",     // dark gray
 
   turnActive: "#4ade80",      // green-400
-  turnInactive: "#475569",    // slate-600
+  turnInactive: "#333333",    // dark gray
 
   dropZone: "rgba(59, 130, 246, 0.2)",
   dropZoneBorder: "#60a5fa",  // blue-400

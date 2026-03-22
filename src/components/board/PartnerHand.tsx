@@ -21,7 +21,7 @@ export default function PartnerHand({
   const tiles = Array.from({ length: tileCount });
 
   return (
-    <div className="flex flex-row my-2 items-center gap-2 flex-shrink-0">
+    <div className="flex flex-row my-2 items-center gap-4 flex-shrink-0">
       <div className="flex flex-row gap-2 items-center">
         {tiles.map((_, i) => (
           <DominoTile

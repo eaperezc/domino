@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { GameState, Player } from "../types";
-import { createGame, dealTiles, playTile, getValidMoves } from "../engine";
+import { createGame, dealTiles, playTile } from "../engine";
 import { chooseMove } from "../ai";
 
 const PLAYERS: Player[] = [
