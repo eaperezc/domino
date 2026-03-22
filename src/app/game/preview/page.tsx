@@ -86,17 +86,48 @@ const SCENARIOS: Scenario[] = [
     chain: [tile(2, 3), tile(3, 3), tile(3, 5), tile(5, 5), tile(5, 1)],
   },
   {
-    name: "Double at bend",
+    name: "Double at bend (both)",
     chain: [
+      // Left arm — double [1,1] near left edge
+      tile(3, 1, "left"),
+      tile(1, 1, "left"), // double at left bend
+      tile(1, 5, "left"),
+      tile(5, 4, "left"),
+      tile(4, 2, "left"),
+      tile(2, 6, "left"),
+      tile(6, 0, "left"),
+      // Starter
+      tile(0, 3),
+      // Right arm — double [0,0] near right edge
+      tile(3, 5),
+      tile(5, 2),
+      tile(2, 6),
+      tile(6, 4),
+      tile(4, 0),
+      tile(0, 0), // double at right bend
+      tile(0, 3),
+      tile(3, 1),
+      tile(1, 1), // double at second bend
+      tile(1, 5),
+      tile(5, 6),
+      tile(0, 3),
+      tile(3, 1),
+      tile(1, 5),
+    ],
+  },
+  {
+    name: "Double after bend",
+    chain: [
+      // Right arm — non-double before bend, then non-double, then double after bend
       tile(1, 3),
       tile(3, 5),
       tile(5, 2),
       tile(2, 6),
       tile(6, 4),
       tile(4, 0),
-      tile(0, 0), // double at the bend point
-      tile(0, 3),
-      tile(3, 1),
+      tile(0, 3), // last tile before bend (non-double)
+      tile(3, 1), // first tile after bend (non-double)
+      tile(1, 1), // double as SECOND tile after bend
       tile(1, 5),
     ],
   },
