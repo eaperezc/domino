@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { broadcastLobbyEvent } from "@/lib/supabase/broadcast";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -86,6 +87,8 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: "Failed to join game" }, { status: 500 });
   }
+
+  await broadcastLobbyEvent(game.id, "seats_changed", {});
 
   return NextResponse.json({ gameId: game.id, seat: availableSeat });
 }

@@ -33,50 +33,58 @@ export function useOnlineGameController(gameId: string) {
   // The displayed state: optimistic if we have one, otherwise server
   const state = optimisticState ?? serverState;
 
+  // Fetch current state from DB
+  const fetchState = useCallback(async () => {
+    const supabase = getSupabase();
+    const { data: game } = await supabase
+      .from("games")
+      .select("game_state")
+      .eq("id", gameId)
+      .single();
+
+    if (game?.game_state) {
+      setServerState(game.game_state as unknown as GameState);
+      setOptimisticState(null);
+      setSaving(false);
+    }
+  }, [gameId]);
+
   // Load initial state and user
   useEffect(() => {
-    const supabase = getSupabase();
     async function load() {
+      const supabase = getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
-
-      const { data: game } = await supabase
-        .from("games")
-        .select("game_state")
-        .eq("id", gameId)
-        .single();
-
-      if (game?.game_state) {
-        setServerState(game.game_state as unknown as GameState);
-      }
+      await fetchState();
       setLoading(false);
     }
     load();
-  }, [gameId]);
+  }, [fetchState]);
 
-  // Subscribe to game state changes
+  // Subscribe to Broadcast channel for game state updates
   useEffect(() => {
     const supabase = getSupabase();
     const channel = supabase
-      .channel(`game-${gameId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${gameId}` },
-        (payload) => {
-          const gs = (payload.new as { game_state: unknown }).game_state;
-          if (gs) {
-            setServerState(gs as unknown as GameState);
-            setOptimisticState(null);
-            setSaving(false);
-          }
-        },
-      )
-      .subscribe();
+      .channel(`game:${gameId}`)
+      .on("broadcast", { event: "game_state" }, (payload) => {
+        const gs = payload.payload as GameState;
+        if (gs) {
+          setServerState(gs);
+          setOptimisticState(null);
+          setSaving(false);
+        }
+      })
+      .subscribe((status) => {
+        // On subscribe/reconnect, fetch fresh state from DB
+        if (status === "SUBSCRIBED") {
+          fetchState();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId]);
+  }, [gameId, fetchState]);
 
   // Reset hand order when hand changes
   const myHand = state?.hands[userId ?? ""] ?? [];
@@ -141,7 +149,6 @@ export function useOnlineGameController(gameId: string) {
       setError(null);
       setSaving(true);
 
-      // Apply optimistic update immediately
       if (optimistic) {
         setOptimisticState(optimistic);
       }
@@ -156,11 +163,10 @@ export function useOnlineGameController(gameId: string) {
         if (!res.ok) {
           const data = await res.json();
           setError(data.error);
-          // Rollback optimistic update
           setOptimisticState(null);
           setSaving(false);
         }
-        // On success, we wait for the Realtime subscription to update
+        // On success, the server broadcasts — we'll receive it via the channel
       } catch {
         setOptimisticState(null);
         setSaving(false);
@@ -175,9 +181,8 @@ export function useOnlineGameController(gameId: string) {
   const playTile = useCallback(
     async (tile: Tile, end: "left" | "right") => {
       if (!serverState || !userId) return;
-      // Compute optimistic state using the engine
       const optimistic = enginePlayTile(serverState, userId, tile, end);
-      if (optimistic === serverState) return; // invalid move
+      if (optimistic === serverState) return;
       await sendAction("action", optimistic, { action: "play", tile, end });
     },
     [serverState, userId, sendAction],

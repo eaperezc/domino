@@ -81,34 +81,32 @@ export default function GameLobbyPage() {
     load();
   }, [gameId]);
 
-  // Subscribe to realtime changes
+  // Subscribe to lobby broadcast channel
   useEffect(() => {
     const supabase = supabaseRef.current;
+
+    const fetchSeats = () => {
+      supabase
+        .from("game_seats")
+        .select("*")
+        .eq("game_id", gameId)
+        .then(({ data }) => setSeats((data ?? []) as Seat[]));
+    };
+
     const channel = supabase
-      .channel(`lobby-${gameId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "game_seats", filter: `game_id=eq.${gameId}` },
-        () => {
-          supabase
-            .from("game_seats")
-            .select("*")
-            .eq("game_id", gameId)
-            .then(({ data }) => setSeats((data ?? []) as Seat[]));
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${gameId}` },
-        (payload) => {
-          const updated = payload.new as Game;
-          setGame(updated);
-          if (updated.status === "playing") {
-            router.push(`/game/online/${gameId}/play`);
-          }
-        },
-      )
-      .subscribe();
+      .channel(`lobby:${gameId}`)
+      .on("broadcast", { event: "seats_changed" }, () => {
+        fetchSeats();
+      })
+      .on("broadcast", { event: "game_started" }, () => {
+        router.push(`/game/online/${gameId}/play`);
+      })
+      .subscribe((status) => {
+        // Fetch fresh seats on connect/reconnect
+        if (status === "SUBSCRIBED") {
+          fetchSeats();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

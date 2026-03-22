@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { broadcastLobbyEvent } from "@/lib/supabase/broadcast";
 
 const SEAT_TEAM: Record<string, string> = {
   bottom: "team1",
@@ -73,6 +74,8 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: "Failed to change seat" }, { status: 500 });
   }
+
+  await broadcastLobbyEvent(gameId, "seats_changed", {});
 
   return NextResponse.json({ ok: true });
 }
