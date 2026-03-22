@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { broadcastGameState } from "@/lib/supabase/broadcast";
+
 import { dealTiles, playTile, drawTile, passTurn } from "@/lib/engine/engine";
 import { chooseMove } from "@/lib/engine/ai";
 import type { GameState } from "@/lib/engine/types";
@@ -50,8 +50,6 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: "Failed to start new round" }, { status: 500 });
   }
-
-  await broadcastGameState(gameId, newState);
 
   return NextResponse.json({ ok: true });
 }

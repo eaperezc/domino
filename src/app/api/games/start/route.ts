@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { broadcastGameState, broadcastLobbyEvent } from "@/lib/supabase/broadcast";
+
 import { createGame, dealTiles, playTile, drawTile, passTurn } from "@/lib/engine/engine";
 import { chooseMove } from "@/lib/engine/ai";
 import type { Player, GameState } from "@/lib/engine/types";
@@ -107,10 +107,6 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: "Failed to start game" }, { status: 500 });
   }
-
-  // Broadcast to lobby (triggers redirect) and game channel
-  await broadcastLobbyEvent(gameId, "game_started", { status: "playing" });
-  await broadcastGameState(gameId, gameState);
 
   return NextResponse.json({ ok: true });
 }

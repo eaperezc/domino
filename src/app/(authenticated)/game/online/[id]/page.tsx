@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -47,15 +47,17 @@ export default function GameLobbyPage() {
   const [fillWithAI, setFillWithAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabaseRef = useRef(createClient());
-
-  // Load initial data
+  // Load user
   useEffect(() => {
-    const supabase = supabaseRef.current;
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+    createClient().auth.getUser().then(({ data: { user } }) => {
       if (user) setUserId(user.id);
+    });
+  }, []);
 
+  // Load initial game data
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
       const { data: gameData } = await supabase
         .from("games")
         .select("*")
@@ -69,47 +71,31 @@ export default function GameLobbyPage() {
       }
 
       setGame(gameData as Game);
-
-      const { data: seatData } = await supabase
-        .from("game_seats")
-        .select("*")
-        .eq("game_id", gameId);
-
-      setSeats((seatData ?? []) as Seat[]);
       setLoading(false);
     }
     load();
   }, [gameId]);
 
-  // Subscribe to lobby broadcast channel
+  // SSE subscription for lobby (seats + game status)
   useEffect(() => {
-    const supabase = supabaseRef.current;
+    const eventSource = new EventSource(`/api/games/${gameId}/lobby-stream`);
 
-    const fetchSeats = () => {
-      supabase
-        .from("game_seats")
-        .select("*")
-        .eq("game_id", gameId)
-        .then(({ data }) => setSeats((data ?? []) as Seat[]));
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as { status: string; seats: Seat[] };
+        setSeats(data.seats);
+
+        if (data.status === "playing") {
+          eventSource.close();
+          router.push(`/game/online/${gameId}/play`);
+        }
+      } catch {
+        // ignore
+      }
     };
 
-    const channel = supabase
-      .channel(`lobby:${gameId}`)
-      .on("broadcast", { event: "seats_changed" }, () => {
-        fetchSeats();
-      })
-      .on("broadcast", { event: "game_started" }, () => {
-        router.push(`/game/online/${gameId}/play`);
-      })
-      .subscribe((status) => {
-        // Fetch fresh seats on connect/reconnect
-        if (status === "SUBSCRIBED") {
-          fetchSeats();
-        }
-      });
-
     return () => {
-      supabase.removeChannel(channel);
+      eventSource.close();
     };
   }, [gameId, router]);
 

@@ -2,16 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidMoves, playTile as enginePlayTile, drawTile as engineDrawTile, passTurn as enginePassTurn } from "./engine";
 import type { GameState, Tile, ValidMove, SeatingMap, SeatPosition } from "./types";
-
-// Stable singleton — avoids recreating on every render
-let _supabase: SupabaseClient | null = null;
-function getSupabase() {
-  if (!_supabase) _supabase = createClient();
-  return _supabase;
-}
 
 const SEAT_POSITIONS: Record<number, SeatPosition> = {
   0: "bottom",
@@ -30,61 +22,49 @@ export function useOnlineGameController(gameId: string) {
   const [handOrder, setHandOrder] = useState<number[] | null>(null);
   const pendingAction = useRef(false);
 
-  // The displayed state: optimistic if we have one, otherwise server
   const state = optimisticState ?? serverState;
 
-  // Fetch current state from DB
-  const fetchState = useCallback(async () => {
-    const supabase = getSupabase();
-    const { data: game } = await supabase
-      .from("games")
-      .select("game_state")
-      .eq("id", gameId)
-      .single();
-
-    if (game?.game_state) {
-      setServerState(game.game_state as unknown as GameState);
-      setOptimisticState(null);
-      setSaving(false);
-    }
-  }, [gameId]);
-
-  // Load initial state and user
+  // Load user on mount
   useEffect(() => {
-    async function load() {
-      const supabase = getSupabase();
-      const { data: { user } } = await supabase.auth.getUser();
+    createClient().auth.getUser().then(({ data: { user } }) => {
       if (user) setUserId(user.id);
-      await fetchState();
-      setLoading(false);
-    }
-    load();
-  }, [fetchState]);
+    });
+  }, []);
 
-  // Subscribe to Broadcast channel for game state updates
+  // SSE subscription for game state
   useEffect(() => {
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`game:${gameId}`)
-      .on("broadcast", { event: "game_state" }, (payload) => {
-        const gs = payload.payload as GameState;
-        if (gs) {
-          setServerState(gs);
-          setOptimisticState(null);
-          setSaving(false);
-        }
-      })
-      .subscribe((status) => {
-        // On subscribe/reconnect, fetch fresh state from DB
-        if (status === "SUBSCRIBED") {
-          fetchState();
-        }
-      });
+    const eventSource = new EventSource(`/api/games/${gameId}/stream`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const gs = JSON.parse(event.data) as GameState;
+        setServerState(gs);
+        setOptimisticState(null);
+        setSaving(false);
+      } catch {
+        // ignore parse errors
+      }
+
+      if (!loading) return;
+      setLoading(false);
+    };
+
+    eventSource.onerror = () => {
+      // EventSource auto-reconnects — just clear loading if stuck
+      setLoading(false);
+    };
+
+    // First message clears loading
+    const onFirstMessage = () => {
+      setLoading(false);
+      eventSource.removeEventListener("message", onFirstMessage);
+    };
+    eventSource.addEventListener("message", onFirstMessage);
 
     return () => {
-      supabase.removeChannel(channel);
+      eventSource.close();
     };
-  }, [gameId, fetchState]);
+  }, [gameId, loading]);
 
   // Reset hand order when hand changes
   const myHand = state?.hands[userId ?? ""] ?? [];
@@ -111,13 +91,10 @@ export function useOnlineGameController(gameId: string) {
     [handLength],
   );
 
-  // Seating map based on player order
   const seating = useMemo<SeatingMap>(() => {
     if (!state || !userId) return {};
-
     const myIndex = state.players.findIndex((p) => p.id === userId);
     if (myIndex === -1) return {};
-
     const map: SeatingMap = {};
     for (let i = 0; i < state.players.length; i++) {
       const offset = (i - myIndex + 4) % 4;
@@ -136,7 +113,6 @@ export function useOnlineGameController(gameId: string) {
   const canDraw = isMyTurn && !canPlay && (state?.boneyard.length ?? 0) > 0;
   const mustPass = isMyTurn && !canPlay && !canDraw;
 
-  // Send action to server, with optimistic update
   const sendAction = useCallback(
     async (
       action: string,
@@ -166,7 +142,7 @@ export function useOnlineGameController(gameId: string) {
           setOptimisticState(null);
           setSaving(false);
         }
-        // On success, the server broadcasts — we'll receive it via the channel
+        // SSE will deliver the new state
       } catch {
         setOptimisticState(null);
         setSaving(false);
