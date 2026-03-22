@@ -55,19 +55,21 @@ export function computeLayout(
   advanceCursor(rightCursor, starterDbl);
 
   let rightTilesSinceBend = MIN_TILES_BEFORE_BEND;
+  let rightLastDbl = starterDbl;
   for (let i = starterIndex + 1; i < chain.length; i++) {
     const played = chain[i];
     const dbl = played.isDouble;
 
     const advance = dbl ? TILE_HEIGHT + TILE_GAP : TILE_WIDTH + TILE_GAP;
     if (rightTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(rightCursor, advance, boardWidth, boardHeight)) {
-      bendCursorCounterCW(rightCursor);
+      bendCursorCounterCW(rightCursor, rightLastDbl);
       rightTilesSinceBend = 0;
     }
 
     const pos = tilePosition(rightCursor, dbl);
     tiles[i] = makeTileRender(played, i, pos, dbl, rightCursor.dir, false, "right");
     advanceCursor(rightCursor, dbl);
+    rightLastDbl = dbl;
     rightTilesSinceBend++;
   }
 
@@ -77,6 +79,7 @@ export function computeLayout(
   const leftCursor: Cursor = { x: starterOrigin - TILE_GAP, y: 0, dir: "left" };
 
   let leftTilesSinceBend = MIN_TILES_BEFORE_BEND;
+  let leftLastDbl = starterDbl;
   for (let i = starterIndex - 1; i >= 0; i--) {
     const played = chain[i];
     const dbl = played.isDouble;
@@ -84,7 +87,7 @@ export function computeLayout(
     const tileW = dbl ? TILE_HEIGHT : TILE_WIDTH;
     const advance = tileW + TILE_GAP;
     if (leftTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(leftCursor, advance, boardWidth, boardHeight)) {
-      bendCursorCounterCW(leftCursor);
+      bendCursorCounterCW(leftCursor, leftLastDbl);
       leftTilesSinceBend = 0;
     }
 
@@ -99,6 +102,7 @@ export function computeLayout(
       case "down":  leftCursor.y += advance; break;
       case "up":    leftCursor.y -= advance; break;
     }
+    leftLastDbl = dbl;
     leftTilesSinceBend++;
   }
 
@@ -230,10 +234,11 @@ function advanceCursor(cursor: Cursor, isDbl: boolean): void {
 }
 
 /** Counter-clockwise bend (used for both arms) */
-function bendCursorCounterCW(cursor: Cursor): void {
+function bendCursorCounterCW(cursor: Cursor, lastWasDouble: boolean): void {
   const oldDir = cursor.dir;
   cursor.dir = turnDirection(oldDir, "counter");
 
+  // Remove the gap from the last advance
   switch (oldDir) {
     case "right": cursor.x -= TILE_GAP; break;
     case "left":  cursor.x += TILE_GAP; break;
@@ -241,22 +246,34 @@ function bendCursorCounterCW(cursor: Cursor): void {
     case "up":    cursor.y += TILE_GAP; break;
   }
 
+  // After advancing past the last tile, the cursor is at the leading edge + GAP.
+  // We already removed the GAP above. Now the cursor is at the leading edge of the last tile.
+  //
+  // For the new segment:
+  // - Along the OLD direction: back up so the new tiles align with the last tile's edge.
+  //   Back up by TILE_HEIGHT/2 (half the narrow side) to center the new segment.
+  // - Perpendicular to OLD direction: shift to the edge of the chain row.
+  //   Always TILE_HEIGHT/2 (the chain row's half-height for non-doubles).
+  const half = TILE_HEIGHT / 2;
+  // Doubles protrude further perpendicular to the chain, so offset extra
+  const extra = lastWasDouble ? (TILE_WIDTH - TILE_HEIGHT) / 2 + TILE_GAP : 0;
+
   switch (oldDir) {
-    case "left": // ← turning to ↓
-      cursor.x += TILE_HEIGHT / 2;
-      cursor.y += TILE_HEIGHT / 2;
-      break;
-    case "down": // ↓ turning to →
-      cursor.y -= TILE_HEIGHT / 2;
-      cursor.x += TILE_HEIGHT / 2;
-      break;
     case "right": // → turning to ↑
-      cursor.x -= TILE_HEIGHT / 2;
-      cursor.y -= TILE_HEIGHT / 2;
+      cursor.x -= half;
+      cursor.y -= half + extra;
       break;
     case "up": // ↑ turning to ←
-      cursor.y += TILE_HEIGHT / 2;
-      cursor.x -= TILE_HEIGHT / 2;
+      cursor.y += half;
+      cursor.x -= half + extra;
+      break;
+    case "left": // ← turning to ↓
+      cursor.x += half;
+      cursor.y += half + extra;
+      break;
+    case "down": // ↓ turning to →
+      cursor.y -= half;
+      cursor.x += half + extra;
       break;
   }
 }

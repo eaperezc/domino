@@ -86,6 +86,21 @@ const SCENARIOS: Scenario[] = [
     chain: [tile(2, 3), tile(3, 3), tile(3, 5), tile(5, 5), tile(5, 1)],
   },
   {
+    name: "Double at bend",
+    chain: [
+      tile(1, 3),
+      tile(3, 5),
+      tile(5, 2),
+      tile(2, 6),
+      tile(6, 4),
+      tile(4, 0),
+      tile(0, 0), // double at the bend point
+      tile(0, 3),
+      tile(3, 1),
+      tile(1, 5),
+    ],
+  },
+  {
     name: "Grow right (bend)",
     chain: [
       // Starter + all tiles grow to the right
@@ -155,7 +170,7 @@ export default function PreviewPage() {
   const scenario = SCENARIOS[selected];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6 flex flex-col items-center gap-6">
+    <div className="h-screen bg-slate-900 text-white p-6 flex flex-col items-center gap-4 overflow-hidden">
       <h1 className="text-xl font-bold">Board Preview</h1>
 
       {/* Scenario picker */}
@@ -188,7 +203,7 @@ export default function PreviewPage() {
       </div>
 
       {/* Board */}
-      <div className="w-full">
+      <div className="w-full flex-1 min-h-0">
         <GameBoard
           chain={scenario.chain}
           draggingTile={null}
