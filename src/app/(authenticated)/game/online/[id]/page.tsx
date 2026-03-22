@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,11 @@ export default function GameLobbyPage() {
   const [fillWithAI, setFillWithAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
 
   // Load initial data
   useEffect(() => {
+    const supabase = supabaseRef.current;
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
@@ -78,17 +79,17 @@ export default function GameLobbyPage() {
       setLoading(false);
     }
     load();
-  }, [gameId, router, supabase]);
+  }, [gameId]);
 
   // Subscribe to realtime changes
   useEffect(() => {
+    const supabase = supabaseRef.current;
     const channel = supabase
       .channel(`lobby-${gameId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "game_seats", filter: `game_id=eq.${gameId}` },
         () => {
-          // Refetch seats on any change
           supabase
             .from("game_seats")
             .select("*")
@@ -112,7 +113,7 @@ export default function GameLobbyPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId, router, supabase]);
+  }, [gameId, router]);
 
   const handleTakeSeat = useCallback(
     async (seat: SeatPosition) => {
@@ -151,6 +152,22 @@ export default function GameLobbyPage() {
     },
     [gameId, userId, seats, changingSeat],
   );
+
+  const handleDelete = useCallback(async () => {
+    if (!confirm("Are you sure you want to delete this game?")) return;
+    setError(null);
+    const res = await fetch("/api/games/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.error);
+    } else {
+      router.push("/home");
+    }
+  }, [gameId, router]);
 
   const handleStart = useCallback(async () => {
     setError(null);
@@ -326,6 +343,9 @@ export default function GameLobbyPage() {
                   Waiting for {emptySeats} more {emptySeats === 1 ? "player" : "players"} or enable AI fill
                 </p>
               )}
+              <Button variant="destructive" size="sm" onClick={handleDelete}>
+                Delete Game
+              </Button>
             </>
           )}
           {!isOwner && (

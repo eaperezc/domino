@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidMoves, playTile as enginePlayTile, drawTile as engineDrawTile, passTurn as enginePassTurn } from "./engine";
 import type { GameState, Tile, ValidMove, SeatingMap, SeatPosition } from "./types";
+
+// Stable singleton — avoids recreating on every render
+let _supabase: SupabaseClient | null = null;
+function getSupabase() {
+  if (!_supabase) _supabase = createClient();
+  return _supabase;
+}
 
 const SEAT_POSITIONS: Record<number, SeatPosition> = {
   0: "bottom",
@@ -25,10 +33,9 @@ export function useOnlineGameController(gameId: string) {
   // The displayed state: optimistic if we have one, otherwise server
   const state = optimisticState ?? serverState;
 
-  const supabase = createClient();
-
   // Load initial state and user
   useEffect(() => {
+    const supabase = getSupabase();
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
@@ -45,10 +52,11 @@ export function useOnlineGameController(gameId: string) {
       setLoading(false);
     }
     load();
-  }, [gameId, supabase]);
+  }, [gameId]);
 
   // Subscribe to game state changes
   useEffect(() => {
+    const supabase = getSupabase();
     const channel = supabase
       .channel(`game-${gameId}`)
       .on(
@@ -58,7 +66,6 @@ export function useOnlineGameController(gameId: string) {
           const gs = (payload.new as { game_state: unknown }).game_state;
           if (gs) {
             setServerState(gs as unknown as GameState);
-            // Clear optimistic state — server is now authoritative
             setOptimisticState(null);
             setSaving(false);
           }
@@ -69,7 +76,7 @@ export function useOnlineGameController(gameId: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId, supabase]);
+  }, [gameId]);
 
   // Reset hand order when hand changes
   const myHand = state?.hands[userId ?? ""] ?? [];

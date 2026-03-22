@@ -139,13 +139,14 @@ export default function GameBoard({
             if (!playableEnds.has(dz.end)) return null;
             const isDbl = draggingTile.left === draggingTile.right;
             const rect = dropZoneRect(dz, isDbl);
+            const pad = 20;
             return (
               <foreignObject
                 key={dz.end}
-                x={rect.x}
-                y={rect.y}
-                width={rect.width}
-                height={rect.height}
+                x={rect.x - pad}
+                y={rect.y - pad}
+                width={rect.width + pad * 2}
+                height={rect.height + pad * 2}
               >
                 <DropTarget
                   isHover={activeHoverEnd === dz.end}
@@ -191,11 +192,15 @@ function DropTarget({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className={`w-full h-full rounded border-2 border-dashed transition-all duration-150 ${
-        isHover
-          ? "border-green-400 bg-green-500/40"
-          : "border-blue-400 bg-blue-500/20"
-      }`}
-    />
+      className="w-full h-full flex items-center justify-center p-[20px]"
+    >
+      <div
+        className={`w-full h-full rounded border-2 border-dashed transition-all duration-150 ${
+          isHover
+            ? "border-green-400 bg-green-500/40"
+            : "border-blue-400 bg-blue-500/20"
+        }`}
+      />
+    </div>
   );
 }
