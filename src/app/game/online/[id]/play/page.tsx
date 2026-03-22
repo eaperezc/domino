@@ -67,7 +67,16 @@ export default function OnlinePlayPage() {
         className="flex flex-col items-center gap-2 w-full h-full px-8"
         style={{ margin: "0 auto" }}
       >
-        <GameStatus state={game.state} humanId={game.userId ?? ""} />
+        <div className="flex items-center gap-2 w-full">
+          <div className="flex-1">
+            <GameStatus state={game.state} humanId={game.userId ?? ""} />
+          </div>
+          {game.saving && (
+            <span className="text-xs text-muted-foreground animate-pulse">
+              Saving...
+            </span>
+          )}
+        </div>
 
         <GameOverDialog
           state={game.state}

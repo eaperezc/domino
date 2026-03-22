@@ -1,23 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getValidMoves } from "./engine";
+import { getValidMoves, playTile as enginePlayTile, drawTile as engineDrawTile, passTurn as enginePassTurn } from "./engine";
 import type { GameState, Tile, ValidMove, SeatingMap, SeatPosition } from "./types";
 
 const SEAT_POSITIONS: Record<number, SeatPosition> = {
   0: "bottom",
-  1: "right",
+  1: "left",
   2: "top",
-  3: "left",
+  3: "right",
 };
 
 export function useOnlineGameController(gameId: string) {
-  const [state, setState] = useState<GameState | null>(null);
+  const [serverState, setServerState] = useState<GameState | null>(null);
+  const [optimisticState, setOptimisticState] = useState<GameState | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [handOrder, setHandOrder] = useState<number[] | null>(null);
+  const pendingAction = useRef(false);
+
+  // The displayed state: optimistic if we have one, otherwise server
+  const state = optimisticState ?? serverState;
 
   const supabase = createClient();
 
@@ -34,7 +40,7 @@ export function useOnlineGameController(gameId: string) {
         .single();
 
       if (game?.game_state) {
-        setState(game.game_state as unknown as GameState);
+        setServerState(game.game_state as unknown as GameState);
       }
       setLoading(false);
     }
@@ -51,7 +57,10 @@ export function useOnlineGameController(gameId: string) {
         (payload) => {
           const gs = (payload.new as { game_state: unknown }).game_state;
           if (gs) {
-            setState(gs as unknown as GameState);
+            setServerState(gs as unknown as GameState);
+            // Clear optimistic state — server is now authoritative
+            setOptimisticState(null);
+            setSaving(false);
           }
         },
       )
@@ -91,7 +100,6 @@ export function useOnlineGameController(gameId: string) {
   const seating = useMemo<SeatingMap>(() => {
     if (!state || !userId) return {};
 
-    // Find user's index in the player array
     const myIndex = state.players.findIndex((p) => p.id === userId);
     if (myIndex === -1) return {};
 
@@ -113,65 +121,83 @@ export function useOnlineGameController(gameId: string) {
   const canDraw = isMyTurn && !canPlay && (state?.boneyard.length ?? 0) > 0;
   const mustPass = isMyTurn && !canPlay && !canDraw;
 
-  // Actions
-  const playTile = useCallback(
-    async (tile: Tile, end: "left" | "right") => {
+  // Send action to server, with optimistic update
+  const sendAction = useCallback(
+    async (
+      action: string,
+      optimistic: GameState | null,
+      body: Record<string, unknown>,
+    ) => {
+      if (pendingAction.current) return;
+      pendingAction.current = true;
+
       setError(null);
-      const res = await fetch("/api/games/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId, action: "play", tile, end }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error);
+      setSaving(true);
+
+      // Apply optimistic update immediately
+      if (optimistic) {
+        setOptimisticState(optimistic);
+      }
+
+      try {
+        const res = await fetch(`/api/games/${action}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId, ...body }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error);
+          // Rollback optimistic update
+          setOptimisticState(null);
+          setSaving(false);
+        }
+        // On success, we wait for the Realtime subscription to update
+      } catch {
+        setOptimisticState(null);
+        setSaving(false);
+        setError("Network error");
+      } finally {
+        pendingAction.current = false;
       }
     },
     [gameId],
   );
 
+  const playTile = useCallback(
+    async (tile: Tile, end: "left" | "right") => {
+      if (!serverState || !userId) return;
+      // Compute optimistic state using the engine
+      const optimistic = enginePlayTile(serverState, userId, tile, end);
+      if (optimistic === serverState) return; // invalid move
+      await sendAction("action", optimistic, { action: "play", tile, end });
+    },
+    [serverState, userId, sendAction],
+  );
+
   const drawTile = useCallback(async () => {
-    setError(null);
-    const res = await fetch("/api/games/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId, action: "draw" }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error);
-    }
-  }, [gameId]);
+    if (!serverState || !userId) return;
+    const optimistic = engineDrawTile(serverState, userId);
+    if (optimistic === serverState) return;
+    await sendAction("action", optimistic, { action: "draw" });
+  }, [serverState, userId, sendAction]);
 
   const passTurn = useCallback(async () => {
-    setError(null);
-    const res = await fetch("/api/games/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId, action: "pass" }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error);
-    }
-  }, [gameId]);
+    if (!serverState || !userId) return;
+    const optimistic = enginePassTurn(serverState, userId);
+    if (optimistic === serverState) return;
+    await sendAction("action", optimistic, { action: "pass" });
+  }, [serverState, userId, sendAction]);
 
   const startNewRound = useCallback(async () => {
-    setError(null);
-    const res = await fetch("/api/games/new-round", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error);
-    }
-  }, [gameId]);
+    await sendAction("new-round", null, {});
+  }, [sendAction]);
 
   return {
     state,
     loading,
+    saving,
     error,
     userId,
     seating,

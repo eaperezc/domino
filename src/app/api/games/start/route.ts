@@ -12,7 +12,7 @@ const SEAT_TEAM: Record<string, string> = {
   left: "team2",
   right: "team2",
 };
-const SEAT_ORDER = ["bottom", "right", "top", "left"] as const;
+const SEAT_ORDER = ["bottom", "left", "top", "right"] as const;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
