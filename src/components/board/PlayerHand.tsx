@@ -28,9 +28,11 @@ export default function PlayerHand({
   const containerRef = useRef<HTMLDivElement>(null);
   const tileRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Keep refs array in sync with tile count
+  // Reset drag state and refs when tiles change (e.g. tile played on board)
   useEffect(() => {
     tileRefs.current = tileRefs.current.slice(0, tiles.length);
+    setDragIndex(null);
+    setHoverIndex(null);
   }, [tiles.length]);
 
   const resetLocal = useCallback(() => {

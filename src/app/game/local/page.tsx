@@ -9,6 +9,7 @@ import PlayerAvatar from "@/components/board/PlayerAvatar";
 import PlayerHand from "@/components/board/PlayerHand";
 import type { SeatPosition, Tile } from "@/lib/engine/types";
 import { useGameController } from "@/lib/engine/useGameController";
+import { Button } from "@/components/ui/button";
 import { theme } from "@/lib/theme";
 import { useDragDrop } from "@/lib/useDragDrop";
 import { useCallback } from "react";
@@ -28,7 +29,7 @@ export default function LocalGamePage() {
   if (!game.state) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="flex-1 flex items-center justify-center"
         style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
       >
         <p style={{ color: theme.pageTextMuted }}>Dealing tiles...</p>
@@ -46,7 +47,7 @@ export default function LocalGamePage() {
 
   return (
     <div
-      className="h-screen flex flex-col items-center gap-2 px-3 py-2 overflow-hidden"
+      className="flex-1 flex flex-col items-center gap-2 px-3 py-2 overflow-hidden"
       style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
     >
     <div
@@ -135,22 +136,14 @@ export default function LocalGamePage() {
           />
 
           {game.isHumanTurn && !game.canPlay && game.canDraw && (
-            <button
-              onClick={game.drawTile}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-              style={{ backgroundColor: theme.btnDraw }}
-            >
+            <Button variant="warning" onClick={game.drawTile}>
               Draw from boneyard
-            </button>
+            </Button>
           )}
           {game.mustPass && (
-            <button
-              onClick={game.passTurn}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-              style={{ backgroundColor: theme.btnPass }}
-            >
+            <Button variant="destructive" onClick={game.passTurn}>
               Pass
-            </button>
+            </Button>
           )}
         </div>
       </div>

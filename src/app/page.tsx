@@ -4,7 +4,7 @@ import { theme } from "@/lib/theme";
 export default function Home() {
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center gap-8"
+      className="flex-1 flex flex-col items-center justify-center gap-8"
       style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
     >
       <div className="text-center">

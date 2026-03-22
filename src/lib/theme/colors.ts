@@ -48,7 +48,7 @@ export interface Theme {
 export const darkTheme: Theme = {
   pageBg: "#0a0a0a",
   pageText: "#f8fafc",
-  pageTextMuted: "#94a3b8",
+  pageTextMuted: "#a1a1aa",
 
   boardBg: "#064e3b",
   boardBorder: "#047857",
