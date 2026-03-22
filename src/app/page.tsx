@@ -12,13 +12,22 @@ export default function Home() {
         <p style={{ color: theme.pageTextMuted }}>Classic draw dominoes</p>
       </div>
 
-      <Link
-        href="/game/local"
-        className="px-8 py-3 rounded-lg text-lg font-medium transition-colors text-white"
-        style={{ backgroundColor: theme.btnPrimary }}
-      >
-        Play vs Computer
-      </Link>
+      <div className="flex flex-col gap-3">
+        <Link
+          href="/game/local"
+          className="px-8 py-3 rounded-lg text-lg font-medium transition-colors text-white text-center"
+          style={{ backgroundColor: theme.btnPrimary }}
+        >
+          Play vs Computer
+        </Link>
+        <Link
+          href="/game/online"
+          className="px-8 py-3 rounded-lg text-lg font-medium transition-colors text-center border"
+          style={{ borderColor: theme.surfaceBorder, color: theme.pageText }}
+        >
+          Play Online
+        </Link>
+      </div>
     </div>
   );
 }
