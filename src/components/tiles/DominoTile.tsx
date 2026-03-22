@@ -69,11 +69,9 @@ export default function DominoTile({
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       onClick={onClick}
-      className={`cursor-pointer transition-transform ${
+      className={`transition-transform ${
         isSelected ? "scale-110" : ""
-      } ${isPlayable && !isSelected ? "opacity-100" : ""} ${
-        !isPlayable && !isSelected ? "opacity-60" : ""
-      }`}
+      } ${isPlayable ? "cursor-grab opacity-100" : "cursor-default opacity-40"}`}
       style={{ filter: isSelected ? "drop-shadow(0 0 6px #3b82f6)" : undefined }}
     >
       {/* Background */}

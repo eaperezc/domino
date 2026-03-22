@@ -1,12 +1,24 @@
 "use client";
 
+import { useCallback } from "react";
 import { useGameController } from "@/lib/engine/useGameController";
+import { useDragDrop } from "@/lib/useDragDrop";
 import GameBoard from "@/components/board/GameBoard";
 import PlayerHand from "@/components/board/PlayerHand";
 import GameStatus from "@/components/board/GameStatus";
+import type { Tile } from "@/lib/engine/types";
 
 export default function LocalGamePage() {
   const game = useGameController();
+  const { drag, startDrag, resetDrag } = useDragDrop();
+
+  const handlePlayTile = useCallback(
+    (tile: Tile, end: "left" | "right") => {
+      game.playTile(tile, end);
+      resetDrag();
+    },
+    [game.playTile, resetDrag],
+  );
 
   if (!game.state) {
     return (
@@ -43,19 +55,22 @@ export default function LocalGamePage() {
       <div className="w-full">
         <GameBoard
           chain={game.state.chain}
-          selectedTile={game.selectedTile}
+          draggingTile={drag.tile}
           validMoves={game.validMoves}
-          onPlayTile={game.playTile}
+          onPlayTile={handlePlayTile}
+          onDragReset={resetDrag}
         />
       </div>
 
       {/* Player hand */}
       <div className="flex flex-col items-center gap-2">
         <PlayerHand
-          tiles={game.state.hands[game.humanId] ?? []}
+          tiles={game.orderedHand}
           validMoves={game.validMoves}
-          selectedTile={game.selectedTile}
-          onSelectTile={game.selectTile}
+          onReorder={game.reorderHand}
+          onDragStart={startDrag}
+          onDragReset={resetDrag}
+          isDragging={drag.tile !== null}
         />
 
         {/* Action buttons */}

@@ -191,9 +191,10 @@ export default function PreviewPage() {
       <div className="w-full">
         <GameBoard
           chain={scenario.chain}
-          selectedTile={null}
+          draggingTile={null}
           validMoves={[]}
           onPlayTile={() => {}}
+          onDragReset={() => {}}
         />
       </div>
     </div>

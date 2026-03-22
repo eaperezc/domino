@@ -30,15 +30,28 @@ function initGame(): GameState {
 export function useGameController() {
   const [state, setState] = useState<GameState | null>(null);
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
+  const [handOrder, setHandOrder] = useState<number[]>([]);
   const aiThinking = useRef(false);
 
   // Initialize game client-side only to avoid hydration mismatch from random shuffle
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (!state) setState(initGame()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Reset hand order when hand changes (tile played, drawn, new round)
+  const handLength = state?.hands[HUMAN_ID]?.length ?? 0;
+  useEffect(() => {
+    setHandOrder(Array.from({ length: handLength }, (_, i) => i));
+  }, [handLength]);
+
   const isHumanTurn = state?.currentTurn === HUMAN_ID && state?.status === "playing";
 
   const validMoves = isHumanTurn && state ? getValidMoves(state, HUMAN_ID) : [];
+
+  // Get the hand tiles in the user's custom order
+  const rawHand = state?.hands[HUMAN_ID] ?? [];
+  const orderedHand = handOrder.length === rawHand.length
+    ? handOrder.map((i) => rawHand[i])
+    : rawHand;
 
   const selectTile = useCallback(
     (tile: Tile) => {
@@ -52,13 +65,22 @@ export function useGameController() {
     [isHumanTurn, selectedTile],
   );
 
+  const reorderHand = useCallback((fromIndex: number, toIndex: number) => {
+    setHandOrder((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
   const handlePlayTile = useCallback(
-    (end: "left" | "right") => {
-      if (!selectedTile || !isHumanTurn || !state) return;
-      setState(playTile(state, HUMAN_ID, selectedTile, end));
+    (tile: Tile, end: "left" | "right") => {
+      if (!isHumanTurn || !state) return;
+      setState(playTile(state, HUMAN_ID, tile, end));
       setSelectedTile(null);
     },
-    [state, selectedTile, isHumanTurn],
+    [state, isHumanTurn],
   );
 
   const handleDrawTile = useCallback(() => {
@@ -138,10 +160,12 @@ export function useGameController() {
     isHumanTurn,
     selectedTile,
     validMoves,
+    orderedHand,
     canPlay,
     canDraw,
     mustPass,
     selectTile,
+    reorderHand,
     playTile: handlePlayTile,
     drawTile: handleDrawTile,
     passTurn: handlePassTurn,

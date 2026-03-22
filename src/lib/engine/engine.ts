@@ -90,8 +90,8 @@ export function getValidMoves(state: GameState, playerId: string): ValidMove[] {
     }
     // Can play on right end?
     if (tile.left === rightEnd || tile.right === rightEnd) {
-      // Avoid duplicate if both ends have the same value and the tile matches
-      if (leftEnd !== rightEnd || !moves.some((m) => sameTile(m.tile, tile))) {
+      // When both ends have the same value, still allow both sides so the player can choose
+      if (leftEnd !== rightEnd || !moves.some((m) => sameTile(m.tile, tile) && m.end === "right")) {
         moves.push({ tile, end: "right" });
       }
     }

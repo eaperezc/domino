@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback, type DragEvent } from "react";
 import type { PlayedTile, ValidMove, Tile } from "@/lib/engine/types";
 import { computeLayout } from "@/lib/renderer";
 import { TILE_WIDTH, TILE_HEIGHT } from "@/lib/renderer";
+import { sameTile } from "@/lib/engine/tiles";
 import DominoTile from "../tiles/DominoTile";
 
 const MIN_WIDTH = 900;
@@ -11,16 +12,18 @@ const BOARD_HEIGHT = 650;
 
 interface GameBoardProps {
   chain: PlayedTile[];
-  selectedTile: Tile | null;
+  draggingTile: Tile | null;
   validMoves: ValidMove[];
-  onPlayTile: (end: "left" | "right") => void;
+  onPlayTile: (tile: Tile, end: "left" | "right") => void;
+  onDragReset: () => void;
 }
 
 export default function GameBoard({
   chain,
-  selectedTile,
+  draggingTile,
   validMoves,
   onPlayTile,
+  onDragReset,
 }: GameBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [boardWidth, setBoardWidth] = useState(MIN_WIDTH);
@@ -43,23 +46,47 @@ export default function GameBoard({
     [chain, boardWidth],
   );
 
+  // Which ends can the dragged tile be played on?
   const playableEnds = useMemo(() => {
-    if (!selectedTile) return new Set<string>();
+    if (!draggingTile) return new Set<string>();
     const ends = new Set<string>();
     for (const m of validMoves) {
-      if (
-        (m.tile.left === selectedTile.left && m.tile.right === selectedTile.right) ||
-        (m.tile.left === selectedTile.right && m.tile.right === selectedTile.left)
-      ) {
+      if (sameTile(m.tile, draggingTile)) {
         ends.add(m.end);
       }
     }
     return ends;
-  }, [selectedTile, validMoves]);
+  }, [draggingTile, validMoves]);
 
-  const { bounds } = layout;
+  const [hoverEnd, setHoverEnd] = useState<string | null>(null);
 
-  // Keep 1:1 scale, always centered on the starter tile at (0, 0).
+  const handleDropOnBoard = useCallback(
+    (e: DragEvent, end: "left" | "right") => {
+      e.preventDefault();
+      setHoverEnd(null);
+      try {
+        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+        if (data.source === "hand" && data.tile) {
+          onPlayTile(data.tile as Tile, end);
+        }
+      } catch {
+        // ignore
+      }
+      onDragReset();
+    },
+    [onPlayTile, onDragReset],
+  );
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  // Reset hover when drag ends (tile dropped or drag cancelled)
+  useEffect(() => {
+    if (!draggingTile) setHoverEnd(null);
+  }, [draggingTile]);
+
   const vbX = -boardWidth / 2;
   const vbY = -BOARD_HEIGHT / 2;
 
@@ -77,6 +104,7 @@ export default function GameBoard({
         viewBox={`${vbX} ${vbY} ${boardWidth} ${BOARD_HEIGHT}`}
         className="relative z-10"
       >
+        {/* Rendered tiles */}
         {layout.tiles.map((t) => (
           <g key={t.tileId} transform={`translate(${t.x}, ${t.y})`}>
             <DominoTile
@@ -89,39 +117,79 @@ export default function GameBoard({
           </g>
         ))}
 
-        {selectedTile &&
+        {/* Drop zones — visible when dragging a playable tile */}
+        {draggingTile &&
           layout.dropZones.map(
             (dz) =>
               playableEnds.has(dz.end) && (
-                <g
+                <foreignObject
                   key={dz.end}
-                  transform={`translate(${dz.x}, ${dz.y})`}
-                  onClick={() => onPlayTile(dz.end)}
-                  className="cursor-pointer"
+                  x={dz.x}
+                  y={dz.y}
+                  width={TILE_WIDTH}
+                  height={TILE_HEIGHT}
                 >
-                  <rect
-                    width={TILE_WIDTH}
-                    height={TILE_HEIGHT}
-                    rx={3}
-                    fill="rgba(59, 130, 246, 0.2)"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    strokeDasharray="4 2"
+                  <DropTarget
+                    end={dz.end}
+                    isHover={hoverEnd === dz.end}
+                    onDragOver={(e) => {
+                      handleDragOver(e);
+                      setHoverEnd(dz.end);
+                    }}
+                    onDragLeave={(e) => {
+                      // Only clear if actually leaving the container (not entering a child)
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const { clientX, clientY } = e;
+                      if (
+                        clientX <= rect.left ||
+                        clientX >= rect.right ||
+                        clientY <= rect.top ||
+                        clientY >= rect.bottom
+                      ) {
+                        setHoverEnd(null);
+                      }
+                    }}
+                    onDrop={(e) => handleDropOnBoard(e, dz.end)}
                   />
-                  <text
-                    x={TILE_WIDTH / 2}
-                    y={TILE_HEIGHT / 2 + 4}
-                    textAnchor="middle"
-                    fill="#3b82f6"
-                    fontSize={12}
-                    fontWeight="bold"
-                  >
-                    Play
-                  </text>
-                </g>
+                </foreignObject>
               ),
           )}
       </svg>
+    </div>
+  );
+}
+
+function DropTarget({
+  end,
+  isHover,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  end: string;
+  isHover: boolean;
+  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDragLeave: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLDivElement>) => void;
+}) {
+  return (
+    <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={`w-full h-full rounded border-2 border-dashed flex items-center justify-center transition-all duration-150 ${
+        isHover
+          ? "border-green-400 bg-green-500/40"
+          : "border-blue-400 bg-blue-500/20"
+      }`}
+    >
+      <span
+        className={`text-sm font-bold select-none pointer-events-none ${
+          isHover ? "text-green-300" : "text-blue-400"
+        }`}
+      >
+        {isHover ? "Drop" : end === "left" ? "◄" : "►"}
+      </span>
     </div>
   );
 }
