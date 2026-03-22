@@ -12,6 +12,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const targetScore = body.targetScore ?? 100;
+  const isPublic = body.isPublic ?? false;
 
   // Get username from profile
   const { data: profile } = await supabase
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       code,
       owner_id: user.id,
       target_score: targetScore,
+      is_public: isPublic,
     });
 
     if (!error) break;

@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Routes that require authentication — redirects to /auth/login if not logged in */
+const PROTECTED_PATHS = ["/game/online", "/home"];
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -25,8 +28,19 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Refresh the session — this is what keeps the user logged in
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Redirect unauthenticated users away from protected routes
+  const isProtected = PROTECTED_PATHS.some((p) =>
+    request.nextUrl.pathname.startsWith(p),
+  );
+
+  if (isProtected && !user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/auth/login";
+    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return supabaseResponse;
 }

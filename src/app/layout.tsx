@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import Header from "@/components/Header";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,7 +28,6 @@ export default function RootLayout({
       className={`dark ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col font-sans overflow-hidden">
-        <Header />
         {children}
       </body>
     </html>

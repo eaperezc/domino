@@ -22,7 +22,7 @@ export default async function Header() {
       className="flex items-center justify-between px-4 py-2 shrink-0"
       style={{ backgroundColor: theme.surfaceBg, borderBottom: `1px solid ${theme.surfaceBorder}` }}
     >
-      <Link href="/" className="text-lg font-bold" style={{ color: theme.pageText }}>
+      <Link href="/home" className="text-lg font-bold" style={{ color: theme.pageText }}>
         Domino
       </Link>
 
