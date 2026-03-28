@@ -23,6 +23,7 @@ function LoginForm() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [tab, setTab] = useState<"signin" | "signup">("signin");
 
   async function handleSignIn() {
@@ -37,6 +38,7 @@ function LoginForm() {
     if (error) {
       setError(error.message);
     } else {
+      setRedirecting(true);
       router.push(redirectTo);
       router.refresh();
     }
@@ -50,15 +52,26 @@ function LoginForm() {
     }
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { username: username.trim() } },
     });
+    if (signUpError) {
+      setLoading(false);
+      setError(signUpError.message);
+      return;
+    }
+    // Auto sign-in after registration
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     setLoading(false);
-    if (error) {
-      setError(error.message);
+    if (signInError) {
+      setError(signInError.message);
     } else {
+      setRedirecting(true);
       router.push(redirectTo);
       router.refresh();
     }
@@ -147,9 +160,9 @@ function LoginForm() {
           <Button
             className="w-full"
             onClick={handleSignIn}
-            disabled={loading}
+            disabled={loading || redirecting}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {redirecting ? "Redirecting..." : loading ? "Signing in..." : "Sign In"}
           </Button>
         </div>
       )}
@@ -211,9 +224,9 @@ function LoginForm() {
           <Button
             className="w-full"
             onClick={handleSignUp}
-            disabled={loading}
+            disabled={loading || redirecting}
           >
-            {loading ? "Creating account..." : "Sign Up"}
+            {redirecting ? "Redirecting..." : loading ? "Creating account..." : "Sign Up"}
           </Button>
         </div>
       )}

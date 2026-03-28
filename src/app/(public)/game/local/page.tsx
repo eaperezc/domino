@@ -44,7 +44,7 @@ export default function LocalGamePage() {
 
   return (
     <div className="flex-1 flex flex-col items-center gap-2 px-3 py-2 overflow-hidden bg-background text-foreground">
-      <div className="flex flex-col items-center gap-2 w-full h-full px-8">
+      <div className="flex flex-col items-center gap-2 w-full h-full px-2 md:px-8">
         {/* Game status bar */}
         <GameStatus
           state={game.state}
@@ -67,7 +67,7 @@ export default function LocalGamePage() {
         />
 
         {/* Middle row: left opponent, board, right opponent */}
-        <div className="flex items-stretch gap-4 w-full flex-1 min-h-0">
+        <div className="flex items-stretch gap-1 md:gap-4 w-full flex-1 min-h-0">
           <div className="flex-shrink-0 flex items-center pl-2">
             <OpponentHand
               name={leftPlayer.name}
@@ -99,7 +99,7 @@ export default function LocalGamePage() {
 
         {/* Player hand (bottom) */}
         <div
-          className={`relative z-20 flex items-center mb-2 mt-1 gap-4 flex-shrink-0 px-4 py-2 transition-all duration-200 bg-card border ${
+          className={`relative z-20 flex items-center mb-2 mt-1 gap-2 md:gap-4 flex-shrink-0 px-2 md:px-4 py-2 transition-all duration-200 bg-card border ${
             game.isHumanTurn
               ? "border-primary border-2 animate-[glow_1.5s_ease-in-out_infinite_alternate]"
               : "border-border/30"

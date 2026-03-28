@@ -11,7 +11,8 @@ interface Cursor {
   dir: Direction;
 }
 
-const BOARD_MARGIN = 80;
+const BOARD_MARGIN_LARGE = 80;
+const BOARD_MARGIN_SMALL = 30;
 const MIN_TILES_BEFORE_BEND = 2;
 
 /**
@@ -24,6 +25,8 @@ export function computeLayout(
   boardWidth: number,
   boardHeight: number,
 ): BoardLayout {
+  const boardMargin = boardWidth < 640 ? BOARD_MARGIN_SMALL : BOARD_MARGIN_LARGE;
+
   if (chain.length === 0) {
     return {
       tiles: [],
@@ -62,7 +65,7 @@ export function computeLayout(
     const dbl = played.isDouble;
 
     const advance = dbl ? TILE_HEIGHT + TILE_GAP : TILE_WIDTH + TILE_GAP;
-    if (rightTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(rightCursor, advance, boardWidth, boardHeight)) {
+    if (rightTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(rightCursor, advance, boardWidth, boardHeight, boardMargin)) {
       // Snake pattern: bends 0,1 go CW (down then left), bends 2,3 go CCW (up then right), etc.
       const rightTurn: "clockwise" | "counter" = Math.floor(rightBendCount / 2) % 2 === 0 ? "clockwise" : "counter";
       bendCursor(rightCursor, rightLastDbl, rightTurn);
@@ -91,7 +94,7 @@ export function computeLayout(
 
     const tileW = dbl ? TILE_HEIGHT : TILE_WIDTH;
     const advance = tileW + TILE_GAP;
-    if (leftTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(leftCursor, advance, boardWidth, boardHeight)) {
+    if (leftTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(leftCursor, advance, boardWidth, boardHeight, boardMargin)) {
       // Snake pattern: bends 0,1 go CW (down then right), bends 2,3 go CCW (up then left), etc.
       const leftTurn: "clockwise" | "counter" = Math.floor(leftBendCount / 2) % 2 === 0 ? "clockwise" : "counter";
       bendCursor(leftCursor, leftLastDbl, leftTurn);
@@ -311,9 +314,10 @@ function shouldBend(
   advance: number,
   boardWidth: number,
   boardHeight: number,
+  margin: number,
 ): boolean {
-  const halfW = boardWidth / 2 - BOARD_MARGIN;
-  const halfH = boardHeight / 2 - BOARD_MARGIN;
+  const halfW = boardWidth / 2 - margin;
+  const halfH = boardHeight / 2 - margin;
 
   switch (cursor.dir) {
     case "right":  return cursor.x + advance > halfW;

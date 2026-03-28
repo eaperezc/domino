@@ -23,7 +23,7 @@ export default function GameStatus({
   const oppScore = state.scores[oppTeam] ?? 0;
 
   return (
-    <div className="flex items-center justify-center gap-3 flex-shrink-0">
+    <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 flex-shrink-0">
       {/* Score HUD */}
       <div className="flex items-center gap-4 text-sm bg-card border border-border/30 px-5 py-2">
         <div className="flex items-center gap-2">

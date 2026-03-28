@@ -86,8 +86,8 @@ export default function GameBoard({
 
   // ViewBox should fit all tiles. Use the layout bounds if they're larger
   // than the board, so tiles zoom out instead of getting clipped.
-  const MIN_VB_WIDTH = 900;
-  const MIN_VB_HEIGHT = 600;
+  const MIN_VB_WIDTH = boardWidth < 640 ? 500 : 900;
+  const MIN_VB_HEIGHT = boardHeight < 400 ? 350 : 600;
   const boundsW = layout.bounds.maxX - layout.bounds.minX;
   const boundsH = layout.bounds.maxY - layout.bounds.minY;
   const boundsCX = (layout.bounds.minX + layout.bounds.maxX) / 2;
