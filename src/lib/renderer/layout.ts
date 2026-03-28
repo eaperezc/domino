@@ -56,13 +56,17 @@ export function computeLayout(
 
   let rightTilesSinceBend = MIN_TILES_BEFORE_BEND;
   let rightLastDbl = starterDbl;
+  let rightBendCount = 0;
   for (let i = starterIndex + 1; i < chain.length; i++) {
     const played = chain[i];
     const dbl = played.isDouble;
 
     const advance = dbl ? TILE_HEIGHT + TILE_GAP : TILE_WIDTH + TILE_GAP;
     if (rightTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(rightCursor, advance, boardWidth, boardHeight)) {
-      bendCursorCounterCW(rightCursor, rightLastDbl);
+      // Snake pattern: bends 0,1 go CW (down then left), bends 2,3 go CCW (up then right), etc.
+      const rightTurn: "clockwise" | "counter" = Math.floor(rightBendCount / 2) % 2 === 0 ? "clockwise" : "counter";
+      bendCursor(rightCursor, rightLastDbl, rightTurn);
+      rightBendCount++;
       rightTilesSinceBend = 0;
     }
 
@@ -80,6 +84,7 @@ export function computeLayout(
 
   let leftTilesSinceBend = MIN_TILES_BEFORE_BEND;
   let leftLastDbl = starterDbl;
+  let leftBendCount = 0;
   for (let i = starterIndex - 1; i >= 0; i--) {
     const played = chain[i];
     const dbl = played.isDouble;
@@ -87,7 +92,10 @@ export function computeLayout(
     const tileW = dbl ? TILE_HEIGHT : TILE_WIDTH;
     const advance = tileW + TILE_GAP;
     if (leftTilesSinceBend >= MIN_TILES_BEFORE_BEND && shouldBend(leftCursor, advance, boardWidth, boardHeight)) {
-      bendCursorCounterCW(leftCursor, leftLastDbl);
+      // Snake pattern: bends 0,1 go CW (down then right), bends 2,3 go CCW (up then left), etc.
+      const leftTurn: "clockwise" | "counter" = Math.floor(leftBendCount / 2) % 2 === 0 ? "clockwise" : "counter";
+      bendCursor(leftCursor, leftLastDbl, leftTurn);
+      leftBendCount++;
       leftTilesSinceBend = 0;
     }
 
@@ -127,7 +135,7 @@ export function computeLayout(
   });
 
   // Bounds — use non-double position as a reasonable estimate for padding
-  const padding = TILE_WIDTH + 20;
+  const padding = TILE_WIDTH + 40;
   const leftDZPos = tilePositionLeft(leftCursor, false);
   const rightDZPos = tilePosition(rightCursor, false);
   const allX = [...tiles.map((t) => t.x), leftDZPos.x, rightDZPos.x];
@@ -244,10 +252,10 @@ function advanceCursor(cursor: Cursor, isDbl: boolean): void {
   }
 }
 
-/** Counter-clockwise bend (used for both arms) */
-function bendCursorCounterCW(cursor: Cursor, lastWasDouble: boolean): void {
+/** Bend the cursor in the given turn direction */
+function bendCursor(cursor: Cursor, lastWasDouble: boolean, turn: "clockwise" | "counter"): void {
   const oldDir = cursor.dir;
-  cursor.dir = turnDirection(oldDir, "counter");
+  cursor.dir = turnDirection(oldDir, turn);
 
   // Remove the gap from the last advance
   switch (oldDir) {
@@ -261,30 +269,39 @@ function bendCursorCounterCW(cursor: Cursor, lastWasDouble: boolean): void {
   // We already removed the GAP above. Now the cursor is at the leading edge of the last tile.
   //
   // For the new segment:
-  // - Along the OLD direction: back up so the new tiles align with the last tile's edge.
-  //   Back up by TILE_HEIGHT/2 (half the narrow side) to center the new segment.
-  // - Perpendicular to OLD direction: shift to the edge of the chain row.
-  //   Always TILE_HEIGHT/2 (the chain row's half-height for non-doubles).
+  // - Along the OLD direction: back up by TILE_HEIGHT/2 so the new row aligns.
+  // - Perpendicular to OLD direction: shift outward to clear the chain row.
+  //   The perpendicular direction depends on whether we're turning CW or CCW.
   const half = TILE_HEIGHT / 2;
-  // Doubles protrude further perpendicular to the chain, so offset extra
   const extra = lastWasDouble ? (TILE_WIDTH - TILE_HEIGHT) / 2 + TILE_GAP : 0;
 
+  // Perpendicular sign: CCW turns shift in one direction, CW in the opposite
+  const sign = turn === "counter" ? 1 : -1;
+
   switch (oldDir) {
-    case "right": // → turning to ↑
+    case "right":
+      // CCW: → turning to ↑ (shift y negative)
+      // CW:  → turning to ↓ (shift y positive)
       cursor.x -= half;
-      cursor.y -= half + extra;
+      cursor.y -= sign * (half + extra);
       break;
-    case "up": // ↑ turning to ←
+    case "up":
+      // CCW: ↑ turning to ← (shift x negative)
+      // CW:  ↑ turning to → (shift x positive)
       cursor.y += half;
-      cursor.x -= half + extra;
+      cursor.x -= sign * (half + extra);
       break;
-    case "left": // ← turning to ↓
+    case "left":
+      // CCW: ← turning to ↓ (shift y positive)
+      // CW:  ← turning to ↑ (shift y negative)
       cursor.x += half;
-      cursor.y += half + extra;
+      cursor.y += sign * (half + extra);
       break;
-    case "down": // ↓ turning to →
+    case "down":
+      // CCW: ↓ turning to → (shift x positive)
+      // CW:  ↓ turning to ← (shift x negative)
       cursor.y -= half;
-      cursor.x += half + extra;
+      cursor.x += sign * (half + extra);
       break;
   }
 }

@@ -86,6 +86,35 @@ const SCENARIOS: Scenario[] = [
     chain: [tile(2, 3), tile(3, 3), tile(3, 5), tile(5, 5), tile(5, 1)],
   },
   {
+    name: "Many right bends (snake test)",
+    chain: [
+      // Starter at center, then ALL tiles grow right.
+      // Should bend: right → up → left → down → right...
+      // Enough tiles to force 3-4 bends on the right arm.
+      tile(0, 1), tile(1, 2), tile(2, 3), tile(3, 4), tile(4, 5),
+      tile(5, 6), tile(6, 0), tile(0, 3), tile(3, 1), tile(1, 4),
+      tile(4, 2), tile(2, 5), tile(5, 0), tile(0, 6), tile(6, 3),
+      tile(3, 2), tile(2, 1), tile(1, 0), tile(0, 4), tile(4, 6),
+      tile(6, 5), tile(5, 3), tile(3, 0), tile(0, 2), tile(2, 6),
+    ],
+  },
+  {
+    name: "Many left bends (snake test)",
+    chain: [
+      // All tiles grow left from the starter.
+      // Should bend: left → down → right → up → left...
+      tile(5, 4, "left"), tile(4, 6, "left"), tile(6, 0, "left"),
+      tile(0, 3, "left"), tile(3, 1, "left"), tile(1, 2, "left"),
+      tile(2, 5, "left"), tile(5, 0, "left"), tile(0, 6, "left"),
+      tile(6, 3, "left"), tile(3, 2, "left"), tile(2, 1, "left"),
+      tile(1, 0, "left"), tile(0, 4, "left"), tile(4, 6, "left"),
+      tile(6, 5, "left"), tile(5, 3, "left"), tile(3, 0, "left"),
+      tile(0, 2, "left"), tile(2, 6, "left"), tile(6, 1, "left"),
+      tile(1, 4, "left"), tile(4, 3, "left"), tile(3, 5, "left"),
+      tile(5, 1),  // starter
+    ],
+  },
+  {
     name: "Double at bend (both)",
     chain: [
       // Left arm — double [1,1] near left edge
@@ -201,8 +230,8 @@ export default function PreviewPage() {
   const scenario = SCENARIOS[selected];
 
   return (
-    <div className="h-screen bg-slate-900 text-white p-6 flex flex-col items-center gap-4 overflow-hidden">
-      <h1 className="text-xl font-bold">Board Preview</h1>
+    <div className="h-screen bg-background text-foreground p-6 flex flex-col items-center gap-4 overflow-hidden">
+      <h1 className="text-xl font-extrabold tracking-tight">Board Preview</h1>
 
       {/* Scenario picker */}
       <div className="flex flex-wrap gap-2 justify-center">
@@ -210,10 +239,10 @@ export default function PreviewPage() {
           <button
             key={i}
             onClick={() => setSelected(i)}
-            className={`px-3 py-1 rounded text-sm ${
+            className={`px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors ${
               i === selected
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                ? "bg-primary text-black"
+                : "bg-card border border-border/30 text-muted-foreground hover:text-foreground"
             }`}
           >
             {s.name}
@@ -222,11 +251,11 @@ export default function PreviewPage() {
       </div>
 
       {/* Chain description */}
-      <div className="text-sm text-slate-400 font-mono">
+      <div className="text-sm text-muted-foreground font-mono">
         {scenario.chain.map((t, i) => (
           <span key={i}>
             {i > 0 && " — "}
-            <span className={t.isDouble ? "text-amber-400" : ""}>
+            <span className={t.isDouble ? "text-warning" : ""}>
               [{t.left}|{t.right}]
             </span>
           </span>

@@ -84,14 +84,18 @@ export default function GameBoard({
     e.dataTransfer.dropEffect = "move";
   }, []);
 
-  // Use a minimum viewBox size so tiles zoom out on small boards
-  // instead of getting clipped
+  // ViewBox should fit all tiles. Use the layout bounds if they're larger
+  // than the board, so tiles zoom out instead of getting clipped.
   const MIN_VB_WIDTH = 900;
   const MIN_VB_HEIGHT = 600;
-  const vbW = Math.max(boardWidth, MIN_VB_WIDTH);
-  const vbH = Math.max(boardHeight, MIN_VB_HEIGHT);
-  const vbX = -vbW / 2;
-  const vbY = -vbH / 2;
+  const boundsW = layout.bounds.maxX - layout.bounds.minX;
+  const boundsH = layout.bounds.maxY - layout.bounds.minY;
+  const boundsCX = (layout.bounds.minX + layout.bounds.maxX) / 2;
+  const boundsCY = (layout.bounds.minY + layout.bounds.maxY) / 2;
+  const vbW = Math.max(boardWidth, MIN_VB_WIDTH, boundsW);
+  const vbH = Math.max(boardHeight, MIN_VB_HEIGHT, boundsH);
+  const vbX = boundsCX - vbW / 2;
+  const vbY = boundsCY - vbH / 2;
 
   return (
     <div

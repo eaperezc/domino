@@ -41,8 +41,11 @@ export function dealTiles(state: GameState): GameState {
     hands[p.id] = boneyard.splice(0, 7);
   }
 
-  // Determine who goes first: player with highest double
-  const firstPlayer = findFirstPlayer(state.players, hands);
+  // Round 1: player with highest double goes first
+  // Subsequent rounds: previous round winner goes first
+  const firstPlayer = state.roundWinner
+    ? state.roundWinner
+    : findFirstPlayer(state.players, hands);
 
   return {
     ...state,
