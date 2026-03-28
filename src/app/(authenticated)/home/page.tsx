@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Panel, PanelHeader, PanelTitle, PanelTag, PanelDescription } from "@/components/ui/panel";
+import { SectionTitle, SectionHeading, SectionSubtitle } from "@/components/ui/section-title";
+import AccentText from "@/components/AccentText";
 
 interface GameListing {
   id: string;
@@ -23,6 +26,11 @@ export default function AppHomePage() {
   const [games, setGames] = useState<GameListing[]>([]);
   const [myGames, setMyGames] = useState<GameListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -30,7 +38,6 @@ export default function AppHomePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch open public games (waiting status)
       const { data: openGames } = await supabase
         .from("games")
         .select("id, code, status, target_score, created_at, owner_id")
@@ -39,7 +46,6 @@ export default function AppHomePage() {
         .order("created_at", { ascending: false })
         .limit(20);
 
-      // Fetch my active games
       const { data: mySeatGames } = await supabase
         .from("game_seats")
         .select("game_id")
@@ -55,7 +61,6 @@ export default function AppHomePage() {
           .in("status", ["waiting", "playing", "round_over"])
           .order("created_at", { ascending: false });
 
-        // Get seat counts
         const enriched = await Promise.all(
           (activeGames ?? []).map(async (g) => {
             const { count } = await supabase
@@ -77,7 +82,6 @@ export default function AppHomePage() {
         setMyGames(enriched);
       }
 
-      // Enrich open games
       const enrichedOpen = await Promise.all(
         (openGames ?? []).filter((g) => !myGameIds.includes(g.id)).map(async (g) => {
           const { count } = await supabase
@@ -102,6 +106,64 @@ export default function AppHomePage() {
     load();
   }, []);
 
+  async function handleCreate() {
+    setError(null);
+    setActionLoading(true);
+    const res = await fetch("/api/games/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetScore: 100, isPublic }),
+    });
+    const data = await res.json();
+    setActionLoading(false);
+
+    if (!res.ok) {
+      setError(data.error ?? "Failed to create game");
+      return;
+    }
+    router.push(`/game/online/${data.gameId}`);
+  }
+
+  async function handleJoin() {
+    setError(null);
+    if (!code.trim()) {
+      setError("Enter a game code");
+      return;
+    }
+    setActionLoading(true);
+    const res = await fetch("/api/games/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code.trim() }),
+    });
+    const data = await res.json();
+    setActionLoading(false);
+
+    if (!res.ok) {
+      setError(data.error ?? "Failed to join game");
+      return;
+    }
+    router.push(`/game/online/${data.gameId}`);
+  }
+
+  async function handleDelete(e: React.MouseEvent, gameId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeletingId(gameId);
+    const res = await fetch("/api/games/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId }),
+    });
+    setDeletingId(null);
+    if (res.ok) {
+      setMyGames((prev) => prev.filter((g) => g.id !== gameId));
+    } else {
+      const data = await res.json();
+      setError(data.error ?? "Failed to delete game");
+    }
+  }
+
   function getStatusBadge(status: string) {
     switch (status) {
       case "waiting":
@@ -116,79 +178,171 @@ export default function AppHomePage() {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-6">
-      <div className="max-w-3xl mx-auto space-y-8">
-        {/* Quick actions */}
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={() => router.push("/game/online")}>
-            Play or Join Game
-          </Button>
-        </div>
+    <div className="flex-1 overflow-auto">
+      <div className="max-w-4xl mx-auto px-6 sm:px-12 py-10 space-y-16">
+
+        {/* Game actions */}
+        <section>
+          <SectionTitle className="mb-10 sm:mb-14">
+            <SectionHeading>
+              Make your <AccentText>move</AccentText>
+            </SectionHeading>
+          </SectionTitle>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            {/* Create */}
+            <Panel className="flex flex-col">
+              <PanelHeader>
+                <PanelTitle>Create</PanelTitle>
+                <PanelTag>New Game</PanelTag>
+              </PanelHeader>
+              <PanelDescription className="mb-5">
+                Start a new game and invite friends with a code.
+              </PanelDescription>
+              <div className="flex items-center justify-between mb-4">
+                <label className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
+                  Public
+                </label>
+                <Switch
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                />
+              </div>
+              <Button onClick={handleCreate} disabled={actionLoading} className="w-full mt-auto">
+                {actionLoading ? "Creating..." : "Create Game"}
+              </Button>
+            </Panel>
+
+            {/* Join */}
+            <Panel className="flex flex-col">
+              <PanelHeader>
+                <PanelTitle>Join</PanelTitle>
+                <PanelTag>By Code</PanelTag>
+              </PanelHeader>
+              <PanelDescription className="mb-5">
+                Enter a 4-letter code to join a friend&apos;s game.
+              </PanelDescription>
+              <input
+                placeholder="ABCD"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                maxLength={4}
+                className="w-full h-12 bg-transparent border border-border/40 px-3 text-center text-xl font-mono tracking-[0.3em] uppercase text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary transition-colors mb-4"
+              />
+              <Button onClick={handleJoin} disabled={actionLoading} variant="secondary" className="w-full mt-auto">
+                {actionLoading ? "Joining..." : "Join Game"}
+              </Button>
+            </Panel>
+
+            {/* Solo */}
+            <Panel className="flex flex-col">
+              <PanelHeader>
+                <PanelTitle>Solo</PanelTitle>
+                <PanelTag>vs AI</PanelTag>
+              </PanelHeader>
+              <PanelDescription className="mb-5">
+                Quick game against 3 computer opponents.
+              </PanelDescription>
+              <Button onClick={() => router.push("/game/local")} variant="outline" className="w-full mt-auto">
+                Start Solo Game
+              </Button>
+            </Panel>
+          </div>
+
+          {error && (
+            <p className="font-mono text-xs text-destructive mt-4 text-center">{error}</p>
+          )}
+        </section>
 
         {/* My active games */}
         {myGames.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">My Games</h2>
-            <div className="grid gap-3">
+          <section>
+            <SectionTitle className="mb-10 sm:mb-14">
+              <SectionHeading>
+                Your <AccentText>games</AccentText>
+              </SectionHeading>
+              <SectionSubtitle>{myGames.length} active</SectionSubtitle>
+            </SectionTitle>
+
+            <div className="space-y-0">
               {myGames.map((g) => (
-                <Link key={g.id} href={g.status === "waiting" ? `/game/online/${g.id}` : `/game/online/${g.id}/play`}>
-                  <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                    <CardContent className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm font-bold tracking-widest">{g.code}</span>
-                        {getStatusBadge(g.status)}
-                        <span className="text-sm text-muted-foreground">
-                          {g.seat_count}/4 players
-                        </span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        Target: {g.target_score}
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <div key={g.id} className="product-card relative group border-t border-border/30 py-4 sm:py-5 flex items-center gap-4 sm:gap-8 transition-colors hover:bg-muted/30">
+                  <Link
+                    href={g.status === "waiting" ? `/game/online/${g.id}` : `/game/online/${g.id}/play`}
+                    className="flex items-center gap-4 sm:gap-8 flex-1 min-w-0"
+                  >
+                    <span className="font-mono text-sm font-bold tracking-widest w-16">{g.code}</span>
+                    {getStatusBadge(g.status)}
+                    <span className="text-sm text-muted-foreground">
+                      {g.seat_count}/4 players
+                    </span>
+                    <span className="text-sm text-muted-foreground ml-auto hidden sm:block">
+                      To {g.target_score}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground/40 group-hover:text-foreground transition-colors">
+                      &rarr;
+                    </span>
+                  </Link>
+                  <Button
+                    onClick={(e) => handleDelete(e, g.id)}
+                    variant="ghost"
+                    size="xs"
+                    disabled={deletingId === g.id}
+                    className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 shrink-0"
+                  >
+                    {deletingId === g.id ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
               ))}
+              <div className="border-t border-border/30" />
             </div>
           </section>
         )}
 
-        {/* Open games to join */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Open Games</h2>
+        {/* Open games */}
+        <section>
+          <SectionTitle className="mb-10 sm:mb-14">
+            <SectionHeading>
+              Open <AccentText>tables</AccentText>
+            </SectionHeading>
+            <SectionSubtitle>Public games looking for players</SectionSubtitle>
+          </SectionTitle>
+
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading games...</p>
+            <p className="font-mono text-xs text-muted-foreground tracking-widest uppercase">
+              Loading...
+            </p>
           ) : games.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground mb-3">No open games right now</p>
-                <Button onClick={() => router.push("/game/online")} size="sm">
-                  Create One
-                </Button>
-              </CardContent>
-            </Card>
+            <Panel className="text-center py-10">
+              <PanelDescription className="mb-4">No open games right now</PanelDescription>
+              <Button onClick={handleCreate} size="sm">
+                Create One
+              </Button>
+            </Panel>
           ) : (
-            <div className="grid gap-3">
+            <div className="space-y-0">
               {games.map((g) => (
                 <Link key={g.id} href={`/game/online/${g.id}`}>
-                  <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                    <CardContent className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm font-bold tracking-widest">{g.code}</span>
-                        <span className="text-sm text-muted-foreground">
-                          by {g.owner?.username ?? "Unknown"}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {g.seat_count}/4 players
-                        </span>
-                      </div>
-                      <Button size="sm" variant="outline">Join</Button>
-                    </CardContent>
-                  </Card>
+                  <div className="product-card relative group border-t border-border/30 py-4 sm:py-5 flex items-center gap-4 sm:gap-8 cursor-pointer transition-colors hover:bg-muted/30">
+                    <span className="font-mono text-sm font-bold tracking-widest w-16">{g.code}</span>
+                    <span className="text-sm text-muted-foreground">
+                      by {g.owner?.username ?? "Unknown"}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {g.seat_count}/4
+                    </span>
+                    <span className="ml-auto">
+                      <Button size="xs" variant="outline">Join</Button>
+                    </span>
+                  </div>
                 </Link>
               ))}
+              <div className="border-t border-border/30" />
             </div>
           )}
         </section>
+
       </div>
     </div>
   );

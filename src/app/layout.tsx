@@ -27,7 +27,7 @@ export default function RootLayout({
       lang="en"
       className={`dark ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="h-full flex flex-col font-sans overflow-hidden">
+      <body suppressHydrationWarning className="h-full flex flex-col font-sans">
         {children}
       </body>
     </html>

@@ -19,21 +19,36 @@ export async function POST(request: Request) {
 
   const db = createServiceClient();
 
-  // Verify ownership
+  // Check if user is the owner
   const { data: game } = await db
     .from("games")
     .select("id, owner_id")
     .eq("id", gameId)
-    .eq("owner_id", user.id)
     .single();
 
   if (!game) {
-    return NextResponse.json({ error: "Game not found or not owner" }, { status: 403 });
+    return NextResponse.json({ error: "Game not found" }, { status: 404 });
   }
 
-  // Delete seats first (cascade should handle this, but be explicit)
-  await db.from("game_seats").delete().eq("game_id", gameId);
-  await db.from("games").delete().eq("id", gameId);
+  if (game.owner_id === user.id) {
+    // Owner: delete the entire game
+    await db.from("game_seats").delete().eq("game_id", gameId);
+    await db.from("games").delete().eq("id", gameId);
+    return NextResponse.json({ ok: true, action: "deleted" });
+  }
 
-  return NextResponse.json({ ok: true });
+  // Not owner: leave the game (remove seat)
+  const { data: seat } = await db
+    .from("game_seats")
+    .select("id")
+    .eq("game_id", gameId)
+    .eq("player_id", user.id)
+    .single();
+
+  if (!seat) {
+    return NextResponse.json({ error: "You are not in this game" }, { status: 403 });
+  }
+
+  await db.from("game_seats").delete().eq("id", seat.id);
+  return NextResponse.json({ ok: true, action: "left" });
 }

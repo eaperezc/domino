@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { theme } from "@/lib/theme";
+import { Navbar, NavbarBrand, NavbarItems, NavbarItem } from "@/components/ui/navbar";
+import { buttonVariants } from "@/components/ui/button-variants";
+import DominoLogo from "./DominoLogo";
 import SignOutButton from "./SignOutButton";
 
 export default async function Header() {
@@ -18,32 +20,27 @@ export default async function Header() {
   }
 
   return (
-    <header
-      className="flex items-center justify-between px-4 py-2 shrink-0"
-      style={{ backgroundColor: theme.surfaceBg, borderBottom: `1px solid ${theme.surfaceBorder}` }}
-    >
-      <Link href="/home" className="text-lg font-bold" style={{ color: theme.pageText }}>
-        Domino
-      </Link>
+    <Navbar>
+      <NavbarBrand>
+        <Link href="/home">
+          <DominoLogo />
+        </Link>
+      </NavbarBrand>
 
-      <div className="flex items-center gap-3">
+      <NavbarItems>
         {user ? (
           <>
-            <span className="text-sm" style={{ color: theme.pageTextMuted }}>
-              {username}
-            </span>
+            <NavbarItem>
+              <span className="text-sm text-muted-foreground">{username}</span>
+            </NavbarItem>
             <SignOutButton />
           </>
         ) : (
-          <Link
-            href="/auth/login"
-            className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
-            style={{ backgroundColor: theme.btnPrimary }}
-          >
+          <Link href="/auth/login" className={buttonVariants({ size: "sm" })}>
             Sign In
           </Link>
         )}
-      </div>
-    </header>
+      </NavbarItems>
+    </Navbar>
   );
 }
