@@ -1,7 +1,6 @@
 "use client";
 
 import type { GameState } from "@/lib/engine/types";
-import { theme } from "@/lib/theme";
 
 interface GameStatusProps {
   state: GameState;
@@ -26,46 +25,33 @@ export default function GameStatus({
   return (
     <div className="flex items-center justify-center gap-3 flex-shrink-0">
       {/* Score HUD */}
-      <div
-        className="flex items-center gap-4 text-sm"
-        style={{
-          background: theme.surfaceBg,
-          borderRadius: 999,
-          padding: "8px 20px",
-        }}
-      >
-        {/* Your team */}
+      <div className="flex items-center gap-4 text-sm bg-card border border-border/30 px-5 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-emerald-400">Your team</span>
-          <span className="text-lg font-bold text-white">{myScore}</span>
+          <span className="font-mono text-[10px] tracking-widest uppercase text-primary">Your team</span>
+          <span className="text-lg font-bold text-foreground">{myScore}</span>
         </div>
 
-        {/* VS divider */}
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-foreground/30">
           vs
         </span>
 
-        {/* Opponents */}
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-white/60">{oppScore}</span>
-          <span className="text-[11px] font-medium text-white/40">Opponents</span>
+          <span className="text-lg font-bold text-foreground/60">{oppScore}</span>
+          <span className="font-mono text-[10px] tracking-widest uppercase text-foreground/40">Opponents</span>
         </div>
       </div>
 
-      {/* Turn indicator pill */}
+      {/* Turn indicator */}
       {state.status === "playing" && (
         <div
-          className="flex items-center gap-2 text-xs font-medium"
-          style={{
-            background: isHumanTurn ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.06)",
-            borderRadius: 999,
-            padding: "6px 14px",
-            border: isHumanTurn ? "1px solid rgba(34,197,94,0.4)" : "1px solid rgba(255,255,255,0.08)",
-            color: isHumanTurn ? "#4ade80" : "rgba(255,255,255,0.4)",
-          }}
+          className={`flex items-center gap-2 font-mono text-[10px] tracking-widest uppercase px-3.5 py-2 border ${
+            isHumanTurn
+              ? "bg-primary/20 border-primary/40 text-primary"
+              : "bg-foreground/5 border-foreground/10 text-foreground/40"
+          }`}
         >
           {isHumanTurn && (
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           )}
           <span>
             {isHumanTurn ? "Your turn" : `${currentPlayer?.name}...`}
@@ -73,16 +59,9 @@ export default function GameStatus({
         </div>
       )}
 
-      {/* Boneyard — only show when there are tiles */}
+      {/* Boneyard */}
       {state.boneyard.length > 0 && (
-        <div
-          className="text-[11px] text-white/30"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            borderRadius: 999,
-            padding: "6px 12px",
-          }}
-        >
+        <div className="font-mono text-[10px] tracking-widest uppercase text-foreground/30 bg-foreground/5 border border-foreground/10 px-3 py-2">
           Boneyard: {state.boneyard.length}
         </div>
       )}

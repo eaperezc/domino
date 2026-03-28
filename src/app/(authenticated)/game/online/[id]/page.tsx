@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Panel } from "@/components/ui/panel";
+import { SectionTitle, SectionHeading } from "@/components/ui/section-title";
+import AccentText from "@/components/AccentText";
 import type { SeatPosition } from "@/lib/engine/types";
 
 interface Seat {
@@ -47,14 +48,12 @@ export default function GameLobbyPage() {
   const [fillWithAI, setFillWithAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
       if (user) setUserId(user.id);
     });
   }, []);
 
-  // Load initial game data
   useEffect(() => {
     async function load() {
       const supabase = createClient();
@@ -76,7 +75,6 @@ export default function GameLobbyPage() {
     load();
   }, [gameId]);
 
-  // SSE subscription for lobby (seats + game status)
   useEffect(() => {
     const eventSource = new EventSource(`/api/games/${gameId}/lobby-stream`);
 
@@ -105,7 +103,6 @@ export default function GameLobbyPage() {
       setError(null);
       setChangingSeat(true);
 
-      // Optimistic: remove from old seat, place in new
       const oldSeats = seats;
       const myCurrent = seats.find((s) => s.player_id === userId);
       let optimistic = seats.filter((s) => s.player_id !== userId);
@@ -130,7 +127,7 @@ export default function GameLobbyPage() {
       if (!res.ok) {
         const data = await res.json();
         setError(data.error);
-        setSeats(oldSeats); // rollback
+        setSeats(oldSeats);
       }
       setChangingSeat(false);
     },
@@ -166,13 +163,14 @@ export default function GameLobbyPage() {
       setError(data.error);
       setStarting(false);
     }
-    // Realtime will handle the redirect
   }, [gameId]);
 
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground">Loading lobby...</p>
+        <p className="font-mono text-xs tracking-widest uppercase text-muted-foreground">
+          Loading lobby...
+        </p>
       </div>
     );
   }
@@ -193,106 +191,103 @@ export default function GameLobbyPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">Game Lobby</h1>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-muted-foreground">Code:</span>
-            <span className="font-mono text-xl font-bold tracking-widest">{game.code}</span>
+      <div className="w-full max-w-lg space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Game <AccentText>Lobby</AccentText>
+          </h1>
+          <div className="flex items-center justify-center gap-3">
+            <span className="font-mono text-xs tracking-widest uppercase text-muted-foreground">Code:</span>
+            <span className="font-mono text-3xl font-bold tracking-[0.3em]">{game.code}</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
             Share this code with friends to join
           </p>
         </div>
 
-        {/* Seat layout - table view */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center text-base">Choose Your Seat</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 grid-rows-3 gap-3 max-w-sm mx-auto">
-              {/* Top seat - Team 1 */}
-              <div className="col-start-2 aspect-square">
-                <SeatSlot
-                  seat={seatMap.get("top")}
-                  position="top"
-                  team="team1"
-                  isMe={mySeat?.seat === "top"}
-                  canTake={!seatMap.has("top") && !!userId && !changingSeat}
-                  onTake={() => handleTakeSeat("top")}
-                />
-              </div>
+        {/* Seat layout */}
+        <Panel>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground text-center mb-4">
+            Choose your seat
+          </p>
+          <div className="grid grid-cols-3 grid-rows-3 gap-3 max-w-sm mx-auto">
+            {/* Top seat - Team 1 */}
+            <div className="col-start-2 aspect-square">
+              <SeatSlot
+                seat={seatMap.get("top")}
+                position="top"
+                team="team1"
+                isMe={mySeat?.seat === "top"}
+                canTake={!seatMap.has("top") && !!userId && !changingSeat}
+                onTake={() => handleTakeSeat("top")}
+              />
+            </div>
 
-              {/* Left seat - Team 2 */}
-              <div className="col-start-1 row-start-2 aspect-square">
-                <SeatSlot
-                  seat={seatMap.get("left")}
-                  position="left"
-                  team="team2"
-                  isMe={mySeat?.seat === "left"}
-                  canTake={!seatMap.has("left") && !!userId && !changingSeat}
-                  onTake={() => handleTakeSeat("left")}
-                />
-              </div>
+            {/* Left seat - Team 2 */}
+            <div className="col-start-1 row-start-2 aspect-square">
+              <SeatSlot
+                seat={seatMap.get("left")}
+                position="left"
+                team="team2"
+                isMe={mySeat?.seat === "left"}
+                canTake={!seatMap.has("left") && !!userId && !changingSeat}
+                onTake={() => handleTakeSeat("left")}
+              />
+            </div>
 
-              {/* Center - table / status */}
-              <div className="col-start-2 row-start-2 aspect-square flex items-center justify-center">
-                <div className="w-full h-full rounded-md bg-muted/50 border border-border flex flex-col items-center justify-center gap-1">
-                  {changingSeat ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      <span className="text-[10px] text-muted-foreground">Changing...</span>
-                    </>
-                  ) : (
-                    <svg viewBox="0 0 40 40" className="w-8 h-8 text-muted-foreground/50">
-                      <rect x="4" y="4" width="32" height="32" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
-                      <line x1="20" y1="6" x2="20" y2="34" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-
-              {/* Right seat - Team 2 */}
-              <div className="col-start-3 row-start-2 aspect-square">
-                <SeatSlot
-                  seat={seatMap.get("right")}
-                  position="right"
-                  team="team2"
-                  isMe={mySeat?.seat === "right"}
-                  canTake={!seatMap.has("right") && !!userId && !changingSeat}
-                  onTake={() => handleTakeSeat("right")}
-                />
-              </div>
-
-              {/* Bottom seat - Team 1 */}
-              <div className="col-start-2 row-start-3 aspect-square">
-                <SeatSlot
-                  seat={seatMap.get("bottom")}
-                  position="bottom"
-                  team="team1"
-                  isMe={mySeat?.seat === "bottom"}
-                  canTake={!seatMap.has("bottom") && !!userId && !changingSeat}
-                  onTake={() => handleTakeSeat("bottom")}
-                />
+            {/* Center - table */}
+            <div className="col-start-2 row-start-2 aspect-square flex items-center justify-center">
+              <div className="w-full h-full border border-border/30 flex flex-col items-center justify-center gap-1">
+                {changingSeat ? (
+                  <span className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground animate-pulse">
+                    Changing...
+                  </span>
+                ) : (
+                  <svg viewBox="0 0 40 40" className="w-8 h-8 text-muted-foreground/30">
+                    <rect x="4" y="4" width="32" height="32" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <line x1="20" y1="6" x2="20" y2="34" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                )}
               </div>
             </div>
 
-            <div className="flex justify-center gap-6 mt-4 text-xs">
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-sm bg-info/20 border border-info/40" />
-                <span className="text-muted-foreground">Team 1 (Top + Bottom)</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-sm bg-warning/20 border border-warning/40" />
-                <span className="text-muted-foreground">Team 2 (Left + Right)</span>
-              </span>
+            {/* Right seat - Team 2 */}
+            <div className="col-start-3 row-start-2 aspect-square">
+              <SeatSlot
+                seat={seatMap.get("right")}
+                position="right"
+                team="team2"
+                isMe={mySeat?.seat === "right"}
+                canTake={!seatMap.has("right") && !!userId && !changingSeat}
+                onTake={() => handleTakeSeat("right")}
+              />
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Bottom seat - Team 1 */}
+            <div className="col-start-2 row-start-3 aspect-square">
+              <SeatSlot
+                seat={seatMap.get("bottom")}
+                position="bottom"
+                team="team1"
+                isMe={mySeat?.seat === "bottom"}
+                canTake={!seatMap.has("bottom") && !!userId && !changingSeat}
+                onTake={() => handleTakeSeat("bottom")}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-6 mt-4 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 border border-info/40 bg-info/20" />
+              <span className="font-mono text-[10px] tracking-wider uppercase text-muted-foreground">Team 1</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 border border-warning/40 bg-warning/20" />
+              <span className="font-mono text-[10px] tracking-wider uppercase text-muted-foreground">Team 2</span>
+            </span>
+          </div>
+        </Panel>
 
         {/* Actions */}
         <div className="flex flex-col items-center gap-3">
@@ -305,9 +300,9 @@ export default function GameLobbyPage() {
                     checked={fillWithAI}
                     onCheckedChange={setFillWithAI}
                   />
-                  <Label htmlFor="fill-ai" className="text-sm text-muted-foreground">
+                  <label htmlFor="fill-ai" className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
                     Fill {emptySeats} empty {emptySeats === 1 ? "seat" : "seats"} with AI
-                  </Label>
+                  </label>
                 </div>
               )}
               <Button
@@ -318,26 +313,26 @@ export default function GameLobbyPage() {
                 {starting
                   ? "Starting..."
                   : emptySeats > 0 && fillWithAI
-                    ? `Start Game (${humanCount} players + ${emptySeats} AI)`
+                    ? `Start Game (${humanCount} + ${emptySeats} AI)`
                     : "Start Game"
                 }
               </Button>
               {emptySeats > 0 && !fillWithAI && (
-                <p className="text-xs text-muted-foreground">
-                  Waiting for {emptySeats} more {emptySeats === 1 ? "player" : "players"} or enable AI fill
+                <p className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
+                  Waiting for {emptySeats} more {emptySeats === 1 ? "player" : "players"} or enable AI
                 </p>
               )}
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
+              <Button variant="ghost" size="xs" onClick={handleDelete} className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10">
                 Delete Game
               </Button>
             </>
           )}
           {!isOwner && (
-            <p className="text-sm text-muted-foreground">
-              Waiting for the host to start the game...
+            <p className="font-mono text-xs tracking-widest uppercase text-muted-foreground animate-pulse">
+              Waiting for host to start...
             </p>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="font-mono text-xs text-destructive">{error}</p>}
         </div>
       </div>
     </div>
@@ -363,16 +358,12 @@ function SeatSlot({
   const teamColor = isTeam1 ? "info" : "warning";
   const teamLabel = isTeam1 ? "T1" : "T2";
 
-  const baseClasses = "w-full h-full rounded-md border flex flex-col items-center justify-center gap-1 text-xs transition-colors";
+  const baseClasses = "w-full h-full border flex flex-col items-center justify-center gap-1 text-xs transition-colors";
 
   if (seat) {
     return (
       <div
-        className={`${baseClasses} ${
-          isMe
-            ? `border-${teamColor} bg-${teamColor}/15`
-            : `border-${teamColor}/30 bg-${teamColor}/5`
-        }`}
+        className={baseClasses}
         style={{
           borderColor: isMe
             ? `var(--${teamColor})`
@@ -382,12 +373,12 @@ function SeatSlot({
             : `color-mix(in srgb, var(--${teamColor}) 5%, transparent)`,
         }}
       >
-        <div className="font-medium truncate max-w-full px-1">
-          {seat.is_ai ? `${seat.player_name}` : seat.player_name}
+        <div className="font-mono text-xs font-medium truncate max-w-full px-1">
+          {seat.player_name}
         </div>
         <div className="flex items-center gap-1">
           <span
-            className="text-[10px] font-medium px-1 rounded"
+            className="font-mono text-[10px] font-medium px-1 rounded"
             style={{
               color: `var(--${teamColor})`,
               backgroundColor: `color-mix(in srgb, var(--${teamColor}) 15%, transparent)`,
@@ -396,11 +387,11 @@ function SeatSlot({
             {teamLabel}
           </span>
           {seat.is_ai && (
-            <span className="text-[10px] text-muted-foreground">AI</span>
+            <span className="font-mono text-[10px] text-muted-foreground">AI</span>
           )}
         </div>
         {isMe && (
-          <span className="text-[10px] font-medium" style={{ color: `var(--${teamColor})` }}>
+          <span className="font-mono text-[10px] font-medium" style={{ color: `var(--${teamColor})` }}>
             You
           </span>
         )}
@@ -425,7 +416,7 @@ function SeatSlot({
       }}
     >
       <span
-        className="text-xs font-medium px-1.5 py-0.5 rounded"
+        className="font-mono text-[10px] font-medium px-1.5 py-0.5 rounded"
         style={{
           color: `var(--${teamColor})`,
           backgroundColor: `color-mix(in srgb, var(--${teamColor}) 10%, transparent)`,
@@ -433,7 +424,7 @@ function SeatSlot({
       >
         {teamLabel}
       </span>
-      <span className="text-sm font-medium">Open</span>
+      <span className="font-mono text-xs font-medium uppercase">Open</span>
     </button>
   );
 }

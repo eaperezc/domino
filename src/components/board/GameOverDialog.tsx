@@ -1,7 +1,8 @@
 "use client";
 
 import type { GameState } from "@/lib/engine/types";
-import { theme } from "@/lib/theme";
+import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 
 interface GameOverDialogProps {
   state: GameState;
@@ -28,27 +29,24 @@ export default function GameOverDialog({
     : state.winningTeam === humanTeam;
 
   const teams = [...new Set(state.players.map((p) => p.team))];
-
   const roundWinnerPlayer = state.players.find((p) => p.id === state.roundWinner);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div
-        className="rounded-2xl p-8 max-w-md w-full mx-4 flex flex-col items-center gap-6"
-        style={{ backgroundColor: theme.panelBg, border: `1px solid ${theme.panelBorder}` }}
-      >
+      <Panel className="max-w-md w-full mx-4 flex flex-col items-center gap-6 p-8">
         {/* Title */}
         <div className="text-center">
           <h2
-            className="text-3xl font-bold mb-1"
-            style={{ color: didWin ? theme.accentPrimary : theme.pageText }}
+            className={`text-3xl font-extrabold tracking-tight mb-1 ${
+              didWin ? "text-primary" : "text-foreground"
+            }`}
           >
             {isGameOver
               ? didWin ? "You Won!" : "Game Over"
               : didWin ? "Round Won!" : "Round Lost"}
           </h2>
           {roundWinnerPlayer && (
-            <p className="text-sm" style={{ color: theme.pageTextMuted }}>
+            <p className="font-mono text-xs tracking-widest uppercase text-muted-foreground">
               {roundWinnerPlayer.name} went out
             </p>
           )}
@@ -64,26 +62,28 @@ export default function GameOverDialog({
             return (
               <div
                 key={team}
-                className="flex items-center justify-between px-4 py-3 rounded-lg"
-                style={{
-                  backgroundColor: isWinningTeam ? theme.accentMuted : theme.pageBg,
-                  border: isWinningTeam ? `1px solid ${theme.accentPrimary}` : `1px solid ${theme.panelBorder}`,
-                }}
+                className={`flex items-center justify-between px-4 py-3 border ${
+                  isWinningTeam
+                    ? "bg-primary/10 border-primary"
+                    : "bg-background border-border"
+                }`}
               >
                 <div>
                   <div
-                    className="font-medium text-sm"
-                    style={{ color: isMyTeam ? theme.pageText : theme.pageTextMuted }}
+                    className={`font-medium text-sm ${
+                      isMyTeam ? "text-foreground" : "text-muted-foreground"
+                    }`}
                   >
                     {isMyTeam ? "Your team" : "Opponents"}
                   </div>
-                  <div className="text-xs" style={{ color: theme.pageTextMuted }}>
+                  <div className="text-xs text-muted-foreground">
                     {teamPlayers.map((p) => p.name).join(" & ")}
                   </div>
                 </div>
                 <div
-                  className="text-2xl font-bold"
-                  style={{ color: isMyTeam ? theme.pageText : theme.pageTextMuted }}
+                  className={`text-2xl font-bold ${
+                    isMyTeam ? "text-foreground" : "text-muted-foreground"
+                  }`}
                 >
                   {state.scores[team] ?? 0}
                 </div>
@@ -94,7 +94,7 @@ export default function GameOverDialog({
 
         {/* Remaining tiles summary */}
         <div className="w-full">
-          <p className="text-xs mb-2" style={{ color: theme.pageTextMuted }}>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground mb-2">
             Remaining tiles
           </p>
           <div className="flex flex-wrap gap-3">
@@ -104,8 +104,8 @@ export default function GameOverDialog({
                 0,
               ) ?? 0;
               return (
-                <div key={p.id} className="text-xs" style={{ color: theme.pageTextMuted }}>
-                  <span style={{ color: theme.pageText }}>{p.name}</span>: {pips} pips ({state.hands[p.id]?.length ?? 0} tiles)
+                <div key={p.id} className="text-xs text-muted-foreground">
+                  <span className="text-foreground">{p.name}</span>: {pips} pips ({state.hands[p.id]?.length ?? 0} tiles)
                 </div>
               );
             })}
@@ -115,26 +115,18 @@ export default function GameOverDialog({
         {/* Actions */}
         <div className="flex gap-3">
           {!isGameOver && (
-            <button
-              onClick={onNewRound}
-              className="px-6 py-2.5 rounded-lg font-medium text-sm text-white"
-              style={{ backgroundColor: theme.btnPrimary }}
-            >
+            <Button onClick={onNewRound}>
               Next Round
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={onNewGame}
-            className="px-6 py-2.5 rounded-lg font-medium text-sm"
-            style={{
-              backgroundColor: isGameOver ? theme.btnPrimary : theme.panelBorder,
-              color: isGameOver ? "white" : theme.pageTextMuted,
-            }}
+            variant={isGameOver ? "default" : "secondary"}
           >
             New Game
-          </button>
+          </Button>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

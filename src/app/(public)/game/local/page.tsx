@@ -10,7 +10,6 @@ import PlayerHand from "@/components/board/PlayerHand";
 import type { SeatPosition, Tile } from "@/lib/engine/types";
 import { useGameController } from "@/lib/engine/useGameController";
 import { Button } from "@/components/ui/button";
-import { theme } from "@/lib/theme";
 import { useDragDrop } from "@/lib/useDragDrop";
 import { useCallback } from "react";
 
@@ -28,16 +27,14 @@ export default function LocalGamePage() {
 
   if (!game.state) {
     return (
-      <div
-        className="flex-1 flex items-center justify-center"
-        style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
-      >
-        <p style={{ color: theme.pageTextMuted }}>Dealing tiles...</p>
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <p className="font-mono text-xs tracking-widest uppercase text-muted-foreground">
+          Dealing tiles...
+        </p>
       </div>
     );
   }
 
-  // Get opponents by seat position
   const getPlayerAtSeat = (seat: SeatPosition) =>
     game.state!.players.find((p) => game.seating[p.id] === seat);
 
@@ -46,108 +43,97 @@ export default function LocalGamePage() {
   const rightPlayer = getPlayerAtSeat("right")!;
 
   return (
-    <div
-      className="flex-1 flex flex-col items-center gap-2 px-3 py-2 overflow-hidden"
-      style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
-    >
-    <div
-      className="flex flex-col items-center gap-2 w-full h-full px-8"
-      style={{ margin: "0 auto" }}
-    >
-      {/* Game status bar */}
-      <GameStatus
-        state={game.state}
-        humanId={game.humanId}
-      />
-
-      {/* Game over / round over dialog */}
-      <GameOverDialog
-        state={game.state}
-        humanId={game.humanId}
-        onNewRound={game.startNewRound}
-        onNewGame={game.startNewGame}
-      />
-
-      {/* Partner hand (top) */}
-      <PartnerHand
-        name={topPlayer.name}
-        tileCount={game.state.hands[topPlayer.id]?.length ?? 0}
-        isCurrentTurn={game.state.currentTurn === topPlayer.id}
-      />
-
-      {/* Middle row: left opponent, board, right opponent — fills remaining space */}
-      <div className="flex items-stretch gap-4 w-full flex-1 min-h-0">
-        {/* Left opponent */}
-        <div className="flex-shrink-0 flex items-center pl-2">
-          <OpponentHand
-            name={leftPlayer.name}
-            tileCount={game.state.hands[leftPlayer.id]?.length ?? 0}
-            isCurrentTurn={game.state.currentTurn === leftPlayer.id}
-            position="left"
-          />
-        </div>
-
-        {/* Board — grows to fill */}
-        <div className="flex-1 min-w-0 min-h-0">
-          <GameBoard
-            chain={game.state.chain}
-            draggingTile={drag.tile}
-            validMoves={game.validMoves}
-            onPlayTile={handlePlayTile}
-            onDragReset={resetDrag}
-          />
-        </div>
-
-        {/* Right opponent */}
-        <div className="flex-shrink-0 flex items-center pr-2">
-          <OpponentHand
-            name={rightPlayer.name}
-            tileCount={game.state.hands[rightPlayer.id]?.length ?? 0}
-            isCurrentTurn={game.state.currentTurn === rightPlayer.id}
-            position="right"
-          />
-        </div>
-      </div>
-
-      {/* Player hand (bottom) */}
-      <div
-        className={`relative z-20 flex items-center mb-2 mt-1 gap-4 flex-shrink-0 rounded-2xl px-4 py-2 transition-all duration-200 ${
-          game.isHumanTurn ? "animate-[glow_1.5s_ease-in-out_infinite_alternate]" : ""
-        }`}
-        style={{
-          background: theme.surfaceBg,
-          border: game.isHumanTurn ? `2px solid ${theme.turnActive}` : `1px solid ${theme.surfaceBorder}`,
-        }}
-      >
-        <PlayerHand
-          tiles={game.orderedHand}
-          validMoves={game.validMoves}
-          onReorder={game.reorderHand}
-          onDragStart={startDrag}
-          onDragReset={resetDrag}
+    <div className="flex-1 flex flex-col items-center gap-2 px-3 py-2 overflow-hidden bg-background text-foreground">
+      <div className="flex flex-col items-center gap-2 w-full h-full px-8">
+        {/* Game status bar */}
+        <GameStatus
+          state={game.state}
+          humanId={game.humanId}
         />
 
-        <div className="flex flex-col items-center gap-2">
-          <PlayerAvatar
-            name="You"
-            tileCount={game.orderedHand.length}
-            isCurrentTurn={game.isHumanTurn}
-            position="bottom"
+        {/* Game over / round over dialog */}
+        <GameOverDialog
+          state={game.state}
+          humanId={game.humanId}
+          onNewRound={game.startNewRound}
+          onNewGame={game.startNewGame}
+        />
+
+        {/* Partner hand (top) */}
+        <PartnerHand
+          name={topPlayer.name}
+          tileCount={game.state.hands[topPlayer.id]?.length ?? 0}
+          isCurrentTurn={game.state.currentTurn === topPlayer.id}
+        />
+
+        {/* Middle row: left opponent, board, right opponent */}
+        <div className="flex items-stretch gap-4 w-full flex-1 min-h-0">
+          <div className="flex-shrink-0 flex items-center pl-2">
+            <OpponentHand
+              name={leftPlayer.name}
+              tileCount={game.state.hands[leftPlayer.id]?.length ?? 0}
+              isCurrentTurn={game.state.currentTurn === leftPlayer.id}
+              position="left"
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 min-h-0">
+            <GameBoard
+              chain={game.state.chain}
+              draggingTile={drag.tile}
+              validMoves={game.validMoves}
+              onPlayTile={handlePlayTile}
+              onDragReset={resetDrag}
+            />
+          </div>
+
+          <div className="flex-shrink-0 flex items-center pr-2">
+            <OpponentHand
+              name={rightPlayer.name}
+              tileCount={game.state.hands[rightPlayer.id]?.length ?? 0}
+              isCurrentTurn={game.state.currentTurn === rightPlayer.id}
+              position="right"
+            />
+          </div>
+        </div>
+
+        {/* Player hand (bottom) */}
+        <div
+          className={`relative z-20 flex items-center mb-2 mt-1 gap-4 flex-shrink-0 px-4 py-2 transition-all duration-200 bg-card border ${
+            game.isHumanTurn
+              ? "border-primary border-2 animate-[glow_1.5s_ease-in-out_infinite_alternate]"
+              : "border-border/30"
+          }`}
+        >
+          <PlayerHand
+            tiles={game.orderedHand}
+            validMoves={game.validMoves}
+            onReorder={game.reorderHand}
+            onDragStart={startDrag}
+            onDragReset={resetDrag}
           />
 
-          {game.isHumanTurn && !game.canPlay && game.canDraw && (
-            <Button variant="warning" onClick={game.drawTile}>
-              Draw from boneyard
-            </Button>
-          )}
-          {game.mustPass && (
-            <Button variant="destructive" onClick={game.passTurn}>
-              Pass
-            </Button>
-          )}
+          <div className="flex flex-col items-center gap-2">
+            <PlayerAvatar
+              name="You"
+              tileCount={game.orderedHand.length}
+              isCurrentTurn={game.isHumanTurn}
+              position="bottom"
+            />
+
+            {game.isHumanTurn && !game.canPlay && game.canDraw && (
+              <Button variant="warning" onClick={game.drawTile}>
+                Draw from boneyard
+              </Button>
+            )}
+            {game.mustPass && (
+              <Button variant="destructive" onClick={game.passTurn}>
+                Pass
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

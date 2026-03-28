@@ -1,7 +1,5 @@
 "use client";
 
-import { theme } from "@/lib/theme";
-
 interface PlayerAvatarProps {
   name: string;
   tileCount?: number;
@@ -25,48 +23,42 @@ export default function PlayerAvatar({
 
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all duration-200 ${
+      className={`flex items-center gap-2.5 px-3 py-2 transition-all duration-200 border bg-card ${
         isVertical ? "flex-col" : "flex-row"
-      } ${isCurrentTurn ? "animate-[glow_1.5s_ease-in-out_infinite_alternate]" : ""}`}
-      style={{
-        background: theme.surfaceBg,
-        border: isCurrentTurn ? `2px solid ${theme.turnActive}` : `1px solid ${theme.surfaceBorder}`,
-        boxShadow: isCurrentTurn ? "0 0 15px rgba(34,197,94,0.5)" : "none",
-        opacity: isCurrentTurn ? 1 : 0.6,
-        transform: isCurrentTurn ? "scale(1.05)" : "scale(1)",
-      }}
+      } ${
+        isCurrentTurn
+          ? "border-primary shadow-[0_0_15px_rgba(16,185,129,0.5)] scale-105 animate-[glow_1.5s_ease-in-out_infinite_alternate]"
+          : "border-border/30 opacity-60"
+      }`}
     >
-      {/* Avatar circle */}
+      {/* Avatar */}
       <div
-        className="relative flex items-center justify-center rounded-full text-sm font-bold select-none"
-        style={{
-          width: 36,
-          height: 36,
-          backgroundColor: isCurrentTurn ? theme.accentPrimary : "rgba(255,255,255,0.1)",
-          color: isCurrentTurn ? "#000" : theme.pageTextMuted,
-        }}
+        className={`relative flex items-center justify-center w-9 h-9 font-mono text-sm font-bold select-none ${
+          isCurrentTurn
+            ? "bg-primary text-black"
+            : "bg-white/10 text-muted-foreground"
+        }`}
       >
         {initials}
         {isCurrentTurn && (
-          <span
-            className="absolute inset-0 rounded-full animate-ping opacity-20"
-            style={{ backgroundColor: theme.turnActive }}
-          />
+          <span className="absolute inset-0 animate-ping opacity-20 bg-primary" />
         )}
       </div>
 
       {/* Name + tile count */}
       <div className={`flex flex-col ${isVertical ? "items-center" : "items-start"}`}>
         <span
-          className="text-xs font-semibold"
-          style={{ color: isCurrentTurn ? "#fff" : theme.pageTextMuted }}
+          className={`font-mono text-[10px] tracking-widest uppercase font-semibold ${
+            isCurrentTurn ? "text-foreground" : "text-muted-foreground"
+          }`}
         >
           {name}
         </span>
         {tileCount !== undefined && (
           <span
-            className="text-[10px]"
-            style={{ color: isCurrentTurn ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.3)" }}
+            className={`font-mono text-[10px] tracking-wider ${
+              isCurrentTurn ? "text-foreground/70" : "text-foreground/30"
+            }`}
           >
             {tileCount} tile{tileCount !== 1 ? "s" : ""}
           </span>

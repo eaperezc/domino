@@ -12,7 +12,6 @@ import PlayerHand from "@/components/board/PlayerHand";
 import { Button } from "@/components/ui/button";
 import type { SeatPosition, Tile } from "@/lib/engine/types";
 import { useOnlineGameController } from "@/lib/engine/useOnlineGameController";
-import { theme } from "@/lib/theme";
 import { useDragDrop } from "@/lib/useDragDrop";
 
 export default function OnlinePlayPage() {
@@ -31,21 +30,17 @@ export default function OnlinePlayPage() {
 
   if (game.loading) {
     return (
-      <div
-        className="flex-1 flex items-center justify-center"
-        style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
-      >
-        <p style={{ color: theme.pageTextMuted }}>Loading game...</p>
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <p className="font-mono text-xs tracking-widest uppercase text-muted-foreground">
+          Loading game...
+        </p>
       </div>
     );
   }
 
   if (!game.state) {
     return (
-      <div
-        className="flex-1 flex items-center justify-center"
-        style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
-      >
+      <div className="flex-1 flex items-center justify-center bg-background">
         <p className="text-destructive">{game.error ?? "Game not found"}</p>
       </div>
     );
@@ -59,20 +54,14 @@ export default function OnlinePlayPage() {
   const rightPlayer = getPlayerAtSeat("right")!;
 
   return (
-    <div
-      className="flex-1 flex flex-col items-center gap-2 px-3 py-2 overflow-hidden"
-      style={{ backgroundColor: theme.pageBg, color: theme.pageText }}
-    >
-      <div
-        className="flex flex-col items-center gap-2 w-full h-full px-8"
-        style={{ margin: "0 auto" }}
-      >
+    <div className="flex-1 flex flex-col items-center gap-2 px-3 py-2 overflow-hidden bg-background text-foreground">
+      <div className="flex flex-col items-center gap-2 w-full h-full px-8">
         <div className="flex items-center gap-2 w-full">
           <div className="flex-1">
             <GameStatus state={game.state} humanId={game.userId ?? ""} />
           </div>
           {game.saving && (
-            <span className="text-xs text-muted-foreground animate-pulse">
+            <span className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground animate-pulse">
               Saving...
             </span>
           )}
@@ -122,15 +111,11 @@ export default function OnlinePlayPage() {
         </div>
 
         <div
-          className={`relative z-20 flex items-center mb-2 mt-1 gap-4 flex-shrink-0 rounded-2xl px-4 py-2 transition-all duration-200 ${
-            game.isMyTurn ? "animate-[glow_1.5s_ease-in-out_infinite_alternate]" : ""
+          className={`relative z-20 flex items-center mb-2 mt-1 gap-4 flex-shrink-0 px-4 py-2 transition-all duration-200 bg-card border ${
+            game.isMyTurn
+              ? "border-primary border-2 animate-[glow_1.5s_ease-in-out_infinite_alternate]"
+              : "border-border/30"
           }`}
-          style={{
-            background: theme.surfaceBg,
-            border: game.isMyTurn
-              ? `2px solid ${theme.turnActive}`
-              : `1px solid ${theme.surfaceBorder}`,
-          }}
         >
           <PlayerHand
             tiles={game.orderedHand}
@@ -162,7 +147,7 @@ export default function OnlinePlayPage() {
         </div>
 
         {game.error && (
-          <p className="text-sm text-destructive mb-2">{game.error}</p>
+          <p className="font-mono text-xs text-destructive mb-2">{game.error}</p>
         )}
       </div>
     </div>
