@@ -1,5 +1,5 @@
 
-FROM node:24-alpine AS deps
+FROM public.ecr.aws/docker/library/node:24-alpine AS deps
 RUN npm install -g pnpm@10
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml prisma.config.ts ./
@@ -16,7 +16,7 @@ FROM build AS migrator
 ENV NODE_ENV=production
 CMD ["npx", "prisma", "migrate", "deploy"]
 
-FROM node:24-alpine AS runner
+FROM public.ecr.aws/docker/library/node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app/.next/standalone ./
