@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GameStatus {
+  waiting
+  playing
+  round_over
+  game_over
+}
+
+enum SeatPosition {
+  bottom
+  left
+  top
+  right
+}
+
+enum Team {
+  team1
+  team2
+}
+
+/// A player account (replaces Supabase auth.users + profiles).
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+
+  ownedGames Game[]
+  seats      GameSeat[]
+}
+
+model Game {
+  id          String     @id @default(uuid())
+  /// Short join code, e.g. "ABCD"
+  code        String     @unique
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  status      GameStatus @default(waiting)
+  /// Serialized GameState, null until the game starts
+  gameState   Json?
+  targetScore Int        @default(100)
+  isPublic    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  seats GameSeat[]
+
+  @@index([ownerId])
+}
+
+model GameSeat {
+  id         String       @id @default(uuid())
+  game       Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId     String
+  seat       SeatPosition
+  player     User?        @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  playerId   String?
+  playerName String
+  team       Team
+  isAi       Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  @@unique([gameId, seat])
+  @@unique([gameId, playerId])
+  @@index([gameId])
+}

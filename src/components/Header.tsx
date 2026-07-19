@@ -1,23 +1,12 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { currentUser } from "@/lib/current-user";
 import { Navbar, NavbarBrand, NavbarItems, NavbarItem } from "@/components/ui/navbar";
 import { buttonVariants } from "@/components/ui/button-variants";
 import DominoLogo from "./DominoLogo";
 import SignOutButton from "./SignOutButton";
 
 export default async function Header() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let username: string | null = null;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single();
-    username = profile?.username ?? user.user_metadata?.username ?? null;
-  }
+  const user = await currentUser();
 
   return (
     <Navbar>
@@ -31,7 +20,7 @@ export default async function Header() {
         {user ? (
           <>
             <NavbarItem>
-              <span className="text-sm text-muted-foreground">{username}</span>
+              <span className="text-sm text-muted-foreground">{user.username}</span>
             </NavbarItem>
             <SignOutButton />
           </>

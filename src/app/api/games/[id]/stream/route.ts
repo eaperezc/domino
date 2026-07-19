@@ -1,22 +1,19 @@
-import { createServiceClient } from "@/lib/supabase/service";
+import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const POLL_MS = 1000;
+// The ALB kills idle connections after 60s; comments keep quiet games alive.
+const HEARTBEAT_MS = 25_000;
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: gameId } = await params;
-  const db = createServiceClient();
 
-  // Verify game exists
-  const { data: game } = await db
-    .from("games")
-    .select("id")
-    .eq("id", gameId)
-    .single();
-
+  const game = await db.game.findUnique({ where: { id: gameId }, select: { id: true } });
   if (!game) {
     return new Response("Game not found", { status: 404 });
   }
@@ -26,53 +23,56 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
-      // Send initial state immediately
-      const { data } = await db
-        .from("games")
-        .select("game_state, status")
-        .eq("id", gameId)
-        .single();
+      const send = (text: string) => {
+        try {
+          controller.enqueue(encoder.encode(text));
+        } catch {
+          // stream already closed
+        }
+      };
 
-      if (data?.game_state) {
-        const json = JSON.stringify(data.game_state);
-        lastHash = simpleHash(json);
-        controller.enqueue(encoder.encode(`data: ${json}\n\n`));
-      }
+      const sendCurrent = async (): Promise<string | undefined> => {
+        const current = await db.game.findUnique({
+          where: { id: gameId },
+          select: { gameState: true, status: true },
+        });
+        if (!current?.gameState) return current?.status;
+        const json = JSON.stringify(current.gameState);
+        const hash = simpleHash(json);
+        if (hash !== lastHash) {
+          lastHash = hash;
+          send(`data: ${json}\n\n`);
+        }
+        return current.status;
+      };
 
-      // Poll for changes
+      await sendCurrent();
+
       const interval = setInterval(async () => {
         try {
-          const { data: current } = await db
-            .from("games")
-            .select("game_state, status")
-            .eq("id", gameId)
-            .single();
-
-          if (!current?.game_state) return;
-
-          const json = JSON.stringify(current.game_state);
-          const hash = simpleHash(json);
-
-          if (hash !== lastHash) {
-            lastHash = hash;
-            controller.enqueue(encoder.encode(`data: ${json}\n\n`));
-          }
-
-          // Close stream if game is over
-          if (current.status === "game_over") {
-            clearInterval(interval);
+          const status = await sendCurrent();
+          if (status === "game_over") {
+            cleanup();
             controller.close();
           }
         } catch {
-          clearInterval(interval);
+          cleanup();
           controller.close();
         }
-      }, 1000);
+      }, POLL_MS);
 
-      // Clean up if client disconnects
-      _request.signal.addEventListener("abort", () => {
+      const heartbeat = setInterval(() => send(": ping\n\n"), HEARTBEAT_MS);
+
+      const cleanup = () => {
         clearInterval(interval);
-        controller.close();
+        clearInterval(heartbeat);
+      };
+
+      _request.signal.addEventListener("abort", () => {
+        cleanup();
+        try {
+          controller.close();
+        } catch {}
       });
     },
   });
@@ -86,7 +86,6 @@ export async function GET(
   });
 }
 
-/** Fast non-crypto hash for change detection */
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

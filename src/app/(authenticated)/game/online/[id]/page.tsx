@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Panel } from "@/components/ui/panel";
@@ -49,27 +48,23 @@ export default function GameLobbyPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
-      if (user) setUserId(user.id);
-    });
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.user) setUserId(d.user.id);
+      });
   }, []);
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: gameData } = await supabase
-        .from("games")
-        .select("*")
-        .eq("id", gameId)
-        .single();
-
-      if (!gameData) {
+      const res = await fetch(`/api/games/${gameId}`);
+      if (!res.ok) {
         setError("Game not found");
         setLoading(false);
         return;
       }
-
-      setGame(gameData as Game);
+      const data = await res.json();
+      setGame(data.game as Game);
       setLoading(false);
     }
     load();

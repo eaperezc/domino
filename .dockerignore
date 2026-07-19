@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env
+.env.*
+compose.yaml
+Dockerfile
+.dockerignore
+docs
+src/generated
+*.md
+.claude
+.playwright

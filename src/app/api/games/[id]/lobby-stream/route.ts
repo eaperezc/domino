@@ -1,26 +1,20 @@
-import { createServiceClient } from "@/lib/supabase/service";
+import { db } from "@/lib/db";
+import { serializeSeat } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface LobbyState {
-  status: string;
-  seats: unknown[];
-}
+const POLL_MS = 1000;
+// The ALB kills idle connections after 60s; comments keep quiet lobbies alive.
+const HEARTBEAT_MS = 25_000;
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: gameId } = await params;
-  const db = createServiceClient();
 
-  const { data: game } = await db
-    .from("games")
-    .select("id")
-    .eq("id", gameId)
-    .single();
-
+  const game = await db.game.findUnique({ where: { id: gameId }, select: { id: true } });
   if (!game) {
     return new Response("Game not found", { status: 404 });
   }
@@ -30,50 +24,61 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
-      const sendCurrent = async () => {
-        const [{ data: gameData }, { data: seats }] = await Promise.all([
-          db.from("games").select("status").eq("id", gameId).single(),
-          db.from("game_seats").select("*").eq("game_id", gameId),
-        ]);
-
-        const state: LobbyState = {
-          status: gameData?.status ?? "waiting",
-          seats: seats ?? [],
-        };
-
-        const json = JSON.stringify(state);
-        const hash = simpleHash(json);
-
-        if (hash !== lastHash) {
-          lastHash = hash;
-          controller.enqueue(encoder.encode(`data: ${json}\n\n`));
+      const send = (text: string) => {
+        try {
+          controller.enqueue(encoder.encode(text));
+        } catch {
+          // stream already closed
         }
-
-        return gameData?.status;
       };
 
-      // Send initial state
+      const sendCurrent = async (): Promise<string | undefined> => {
+        const current = await db.game.findUnique({
+          where: { id: gameId },
+          select: { status: true, seats: true },
+        });
+        if (!current) return undefined;
+
+        const state = {
+          status: current.status,
+          seats: current.seats.map(serializeSeat),
+        };
+        const json = JSON.stringify(state);
+        const hash = simpleHash(json);
+        if (hash !== lastHash) {
+          lastHash = hash;
+          send(`data: ${json}\n\n`);
+        }
+        return current.status;
+      };
+
       await sendCurrent();
 
-      // Poll for changes
       const interval = setInterval(async () => {
         try {
           const status = await sendCurrent();
-          // Close if game started or is over
           if (status === "playing" || status === "game_over") {
-            // Send one final update then close
-            clearInterval(interval);
+            cleanup();
             controller.close();
           }
         } catch {
-          clearInterval(interval);
+          cleanup();
           controller.close();
         }
-      }, 1000);
+      }, POLL_MS);
+
+      const heartbeat = setInterval(() => send(": ping\n\n"), HEARTBEAT_MS);
+
+      const cleanup = () => {
+        clearInterval(interval);
+        clearInterval(heartbeat);
+      };
 
       _request.signal.addEventListener("abort", () => {
-        clearInterval(interval);
-        controller.close();
+        cleanup();
+        try {
+          controller.close();
+        } catch {}
       });
     },
   });

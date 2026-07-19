@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signInAction, signUpAction } from "@/lib/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 
@@ -29,14 +29,10 @@ function LoginForm() {
   async function handleSignIn() {
     setError(null);
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const result = await signInAction(email, password);
     setLoading(false);
-    if (error) {
-      setError(error.message);
+    if ("error" in result) {
+      setError(result.error);
     } else {
       setRedirecting(true);
       router.push(redirectTo);
@@ -51,25 +47,10 @@ function LoginForm() {
       return;
     }
     setLoading(true);
-    const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username: username.trim() } },
-    });
-    if (signUpError) {
-      setLoading(false);
-      setError(signUpError.message);
-      return;
-    }
-    // Auto sign-in after registration
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const result = await signUpAction(email, username, password);
     setLoading(false);
-    if (signInError) {
-      setError(signInError.message);
+    if ("error" in result) {
+      setError(result.error);
     } else {
       setRedirecting(true);
       router.push(redirectTo);

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -34,73 +33,14 @@ export default function AppHomePage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: openGames } = await supabase
-        .from("games")
-        .select("id, code, status, target_score, created_at, owner_id")
-        .eq("status", "waiting")
-        .eq("is_public", true)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      const { data: mySeatGames } = await supabase
-        .from("game_seats")
-        .select("game_id")
-        .eq("player_id", user.id);
-
-      const myGameIds = (mySeatGames ?? []).map((s) => s.game_id);
-
-      if (myGameIds.length > 0) {
-        const { data: activeGames } = await supabase
-          .from("games")
-          .select("id, code, status, target_score, created_at, owner_id")
-          .in("id", myGameIds)
-          .in("status", ["waiting", "playing", "round_over"])
-          .order("created_at", { ascending: false });
-
-        const enriched = await Promise.all(
-          (activeGames ?? []).map(async (g) => {
-            const { count } = await supabase
-              .from("game_seats")
-              .select("id", { count: "exact", head: true })
-              .eq("game_id", g.id)
-              .eq("is_ai", false);
-
-            const { data: owner } = await supabase
-              .from("profiles")
-              .select("username")
-              .eq("id", g.owner_id)
-              .single();
-
-            return { ...g, seat_count: count ?? 0, owner };
-          }),
-        );
-
-        setMyGames(enriched);
+      const res = await fetch("/api/games");
+      if (!res.ok) {
+        setLoading(false);
+        return;
       }
-
-      const enrichedOpen = await Promise.all(
-        (openGames ?? []).filter((g) => !myGameIds.includes(g.id)).map(async (g) => {
-          const { count } = await supabase
-            .from("game_seats")
-            .select("id", { count: "exact", head: true })
-            .eq("game_id", g.id)
-            .eq("is_ai", false);
-
-          const { data: owner } = await supabase
-            .from("profiles")
-            .select("username")
-            .eq("id", g.owner_id)
-            .single();
-
-          return { ...g, seat_count: count ?? 0, owner };
-        }),
-      );
-
-      setGames(enrichedOpen);
+      const data = (await res.json()) as { myGames: GameListing[]; openGames: GameListing[] };
+      setMyGames(data.myGames);
+      setGames(data.openGames);
       setLoading(false);
     }
     load();

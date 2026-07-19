@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { db } from "@/lib/db";
+import { currentUser } from "@/lib/current-user";
 
-
-const SEAT_TEAM: Record<string, string> = {
+const SEAT_TEAM: Record<string, "team1" | "team2"> = {
   bottom: "team1",
   top: "team1",
   left: "team2",
@@ -10,68 +10,40 @@ const SEAT_TEAM: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { gameId, seat } = body;
-
+  const { gameId, seat } = body as { gameId?: string; seat?: string };
   if (!gameId || !seat || !SEAT_TEAM[seat]) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Check game exists and is waiting
-  const { data: game } = await supabase
-    .from("games")
-    .select("id, status")
-    .eq("id", gameId)
-    .single();
-
+  const game = await db.game.findUnique({ where: { id: gameId }, select: { status: true } });
   if (!game || game.status !== "waiting") {
     return NextResponse.json({ error: "Game not available" }, { status: 400 });
   }
 
-  // Check seat is free
-  const { data: existing } = await supabase
-    .from("game_seats")
-    .select("id, player_id")
-    .eq("game_id", gameId)
-    .eq("seat", seat)
-    .single();
-
-  if (existing) {
-    return NextResponse.json({ error: "Seat is taken" }, { status: 400 });
-  }
-
-  // Remove player from their current seat
-  await supabase
-    .from("game_seats")
-    .delete()
-    .eq("game_id", gameId)
-    .eq("player_id", user.id);
-
-  // Get username
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .single();
-
-  // Take the new seat
-  const { error } = await supabase.from("game_seats").insert({
-    game_id: gameId,
-    seat,
-    player_id: user.id,
-    player_name: profile?.username ?? "Player",
-    team: SEAT_TEAM[seat],
-    is_ai: false,
+  const existing = await db.gameSeat.findUnique({
+    where: { gameId_seat: { gameId, seat: seat as "bottom" | "left" | "top" | "right" } },
+    select: { id: true },
   });
+  if (existing) return NextResponse.json({ error: "Seat is taken" }, { status: 400 });
 
-  if (error) {
+  try {
+    await db.$transaction([
+      db.gameSeat.deleteMany({ where: { gameId, playerId: user.id } }),
+      db.gameSeat.create({
+        data: {
+          gameId,
+          seat: seat as "bottom" | "left" | "top" | "right",
+          playerId: user.id,
+          playerName: user.username,
+          team: SEAT_TEAM[seat],
+        },
+      }),
+    ]);
+  } catch {
     return NextResponse.json({ error: "Failed to change seat" }, { status: 500 });
   }
 

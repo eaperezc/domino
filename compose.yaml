@@ -1,0 +1,15 @@
+# Local dev database only. Production uses the shared platform RDS (domino schema).
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: domino
+      POSTGRES_PASSWORD: domino
+      POSTGRES_DB: domino
+    ports:
+      - "5434:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:

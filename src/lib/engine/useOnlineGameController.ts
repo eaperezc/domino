@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { getValidMoves, playTile as enginePlayTile, drawTile as engineDrawTile, passTurn as enginePassTurn } from "./engine";
 import type { GameState, Tile, ValidMove, SeatingMap, SeatPosition } from "./types";
 
@@ -26,9 +25,11 @@ export function useOnlineGameController(gameId: string) {
 
   // Load user on mount
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
-      if (user) setUserId(user.id);
-    });
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.user) setUserId(d.user.id);
+      });
   }, []);
 
   // SSE subscription for game state
